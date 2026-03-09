@@ -474,6 +474,23 @@ impl WidgetMatchEvent for AddProviderModal {
                     system_prompt: None,
                     tools_enabled: true,
                 },
+                ProviderType::CrewRs => Provider {
+                    id: provider_id,
+                    name: name.clone(),
+                    url: api_host.clone(),
+                    api_key: if api_key.is_empty() {
+                        None
+                    } else {
+                        Some(api_key.clone())
+                    },
+                    provider_type: ProviderType::CrewRs,
+                    connection_status: ProviderConnectionStatus::Disconnected,
+                    enabled: true,
+                    models: vec![],
+                    was_customly_added: true,
+                    system_prompt: None,
+                    tools_enabled: false,
+                },
             };
 
             store.insert_or_update_provider(&provider);

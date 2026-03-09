@@ -174,6 +174,7 @@ pub enum ProviderType {
     DeepInquire,
     MolyServer,
     OpenClaw,
+    CrewRs,
 }
 
 impl ProviderType {
@@ -186,6 +187,7 @@ impl ProviderType {
             ProviderType::DeepInquire => "DeepInquire",
             ProviderType::MolyServer => "MolyServer",
             ProviderType::OpenClaw => "OpenClaw",
+            ProviderType::CrewRs => "CrewRs",
         }
     }
 }
