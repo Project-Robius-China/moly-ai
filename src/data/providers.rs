@@ -190,6 +190,17 @@ impl ProviderType {
             ProviderType::CrewRs => "CrewRs",
         }
     }
+
+    /// Whether users can select individual models for this provider.
+    ///
+    /// Providers like OpenClaw and CrewRs manage models internally,
+    /// so the model selection UI should be hidden.
+    pub fn has_model_selection(&self) -> bool {
+        match self {
+            ProviderType::OpenClaw | ProviderType::CrewRs => false,
+            _ => true,
+        }
+    }
 }
 
 impl Default for ProviderType {
