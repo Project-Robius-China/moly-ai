@@ -160,6 +160,15 @@
             "supported_models": [
                 "openclaw/assistant"
             ]
+        },
+        {
+            "id": "crewrs",
+            "name": "CrewRs",
+            "url": "http://127.0.0.1:8080",
+            "provider_type": "CrewRs",
+            "supported_models": [
+                "crew-rs"
+            ]
         }
     ]
 }
