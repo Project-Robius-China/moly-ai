@@ -579,7 +579,8 @@ impl Widget for ProviderView {
             self.view(ids!(refresh_button)).set_visible(cx, false);
         }
 
-        let show_models = has_models && self.provider.provider_type != ProviderType::OpenClaw;
+        let show_models =
+            has_models && self.provider.provider_type.has_model_selection();
         self.view(ids!(provider_features_group))
             .set_visible(cx, show_models);
 
