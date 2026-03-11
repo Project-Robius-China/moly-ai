@@ -476,6 +476,35 @@ impl Store {
             self.chats.providers.insert(provider.id.clone(), provider);
         }
 
+        // Auto-register the BotFather provider (native only, requires server)
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.bot_server_state.is_some() {
+            let botfather_id = "botfather".to_string();
+            if !self.chats.providers.contains_key(&botfather_id) {
+                let provider = Provider {
+                    id: botfather_id,
+                    name: "BotFather".to_string(),
+                    url: String::new(),
+                    api_key: None,
+                    provider_type: ProviderType::BotFather,
+                    connection_status: ProviderConnectionStatus::Connected,
+                    enabled: true,
+                    models: vec![],
+                    was_customly_added: false,
+                    system_prompt: None,
+                    tools_enabled: false,
+                };
+                self.chats.providers.insert(
+                    provider.id.clone(),
+                    provider.clone(),
+                );
+                self.chats.register_provider(
+                    provider,
+                    &mut self.provider_syncing_status,
+                );
+            }
+        }
+
         self.auto_fetch_for_enabled_providers();
     }
 
