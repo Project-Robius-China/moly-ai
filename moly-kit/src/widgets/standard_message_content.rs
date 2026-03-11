@@ -9,7 +9,9 @@ use crate::{
 use makepad_widgets::*;
 
 use super::{
-    citation_list::CitationListWidgetExt, message_thinking_block::MessageThinkingBlockWidgetExt,
+    citation_list::CitationListWidgetExt,
+    message_thinking_block::MessageThinkingBlockWidgetExt,
+    quick_reply_group::QuickReplyGroupWidgetExt,
 };
 
 live_design! {
@@ -20,6 +22,7 @@ live_design! {
     use crate::widgets::message_thinking_block::*;
     use crate::widgets::message_markdown::*;
     use crate::widgets::citation_list::*;
+    use crate::widgets::quick_reply_group::*;
     use crate::widgets::attachment_list::*;
     use crate::widgets::attachment_viewer_modal::*;
 
@@ -29,6 +32,7 @@ live_design! {
         spacing: 5
         thinking_block = <MessageThinkingBlock> {}
         markdown = <MessageMarkdown> {}
+        quick_replies = <QuickReplyGroup> {}
         citations = <CitationList> { visible: false }
         attachments = <AttachmentList> {}
         attachment_viewer_modal = <AttachmentViewerModal> {}
@@ -75,6 +79,9 @@ impl StandardMessageContent {
         let citation_list = self.citation_list(ids!(citations));
         citation_list.borrow_mut().unwrap().urls = content.citations.clone();
         citation_list.borrow_mut().unwrap().visible = !content.citations.is_empty();
+
+        self.quick_reply_group(ids!(quick_replies))
+            .set_buttons(cx, &content.quick_replies);
 
         let mut attachments = self.attachment_list(ids!(attachments));
         attachments.write().attachments = content.attachments.clone();

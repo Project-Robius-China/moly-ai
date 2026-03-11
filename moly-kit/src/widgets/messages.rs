@@ -83,7 +83,7 @@ live_design! {
 /// Relevant actions that should be handled by a parent.
 ///
 /// If includes an index, it refers to the index of the message in the list.
-#[derive(Debug, PartialEq, Copy, Clone, DefaultNone)]
+#[derive(Debug, PartialEq, Clone, DefaultNone)]
 pub enum MessagesAction {
     /// The message at the given index should be copied.
     Copy(usize),
@@ -103,6 +103,9 @@ pub enum MessagesAction {
 
     /// The tool request at the given index should be denied.
     ToolDeny(usize),
+
+    /// A quick reply button was clicked. Contains the action text to inject.
+    QuickReply(String),
 
     None,
 }
@@ -178,6 +181,16 @@ impl Widget for Messages {
         for action in event.widget_actions() {
             if let CitationAction::Open(url) = action.cast() {
                 let _ = robius_open::Uri::new(url.as_str()).open();
+            }
+
+            if let super::quick_reply_group::QuickReplyAction::Clicked(text) =
+                action.cast()
+            {
+                cx.widget_action(
+                    self.widget_uid(),
+                    &scope.path,
+                    MessagesAction::QuickReply(text),
+                );
             }
         }
     }
