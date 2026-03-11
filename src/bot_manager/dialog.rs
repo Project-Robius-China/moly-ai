@@ -1,6 +1,8 @@
 //! Dialog state machine and command handling for BotFather.
 
+use moly_kit::aitk::protocol::{ButtonStyle, QuickReplyButton};
 use moly_kit::aitk::telegram_server::{BotInfo, BotStore, BotUpdate};
+use moly_kit::prelude::MessageContent;
 
 /// Canonical command reference — the **single source of truth** for every
 /// place that lists BotFather commands (welcome message, `/start`, `/help`,
@@ -45,7 +47,7 @@ pub fn process_input(
     input: &str,
     store: &BotStore,
     server_port: u16,
-) -> String {
+) -> MessageContent {
     let trimmed = input.trim();
 
     // Commands always take priority, resetting any active wizard.
@@ -55,22 +57,36 @@ pub fn process_input(
 
     // Otherwise, handle input based on current state.
     match state.clone() {
-        DialogState::Idle => handle_unknown(trimmed),
+        DialogState::Idle => plain(handle_unknown(trimmed)),
         DialogState::AwaitingBotName => {
-            handle_awaiting_bot_name(state, trimmed)
+            plain(handle_awaiting_bot_name(state, trimmed))
         }
         DialogState::AwaitingUsername { name } => {
             handle_awaiting_username(state, &name, trimmed, store, server_port)
         }
         DialogState::ManagingBot { token } => {
-            handle_managing_bot_input(state, &token, trimmed, store, server_port)
+            plain(handle_managing_bot_input(
+                state,
+                &token,
+                trimmed,
+                store,
+                server_port,
+            ))
         }
         DialogState::AwaitingNewName { token } => {
-            handle_awaiting_new_name(state, &token, trimmed, store)
+            plain(handle_awaiting_new_name(state, &token, trimmed, store))
         }
         DialogState::ConfirmingDelete { token } => {
-            handle_confirming_delete(state, &token, trimmed, store)
+            plain(handle_confirming_delete(state, &token, trimmed, store))
         }
+    }
+}
+
+/// Wrap a plain text string into a [`MessageContent`] with no quick replies.
+fn plain(text: String) -> MessageContent {
+    MessageContent {
+        text,
+        ..Default::default()
     }
 }
 
@@ -80,7 +96,7 @@ fn try_command(
     state: &mut DialogState,
     store: &BotStore,
     _server_port: u16,
-) -> Option<String> {
+) -> Option<MessageContent> {
     if !input.starts_with('/') {
         return None;
     }
@@ -93,10 +109,10 @@ fn try_command(
         }
         "/newbot" => {
             *state = DialogState::AwaitingBotName;
-            Some(
+            Some(plain(
                 "Alright, a new bot. Please choose a name for your bot:"
                     .to_string(),
-            )
+            ))
         }
         "/mybots" => {
             *state = DialogState::Idle;
@@ -104,32 +120,65 @@ fn try_command(
         }
         "/cancel" => {
             *state = DialogState::Idle;
-            Some(
+            Some(plain(
                 "Operation cancelled. Send /start to see available commands."
                     .to_string(),
-            )
+            ))
         }
         _ => {
             *state = DialogState::Idle;
-            Some(format!(
+            Some(plain(format!(
                 "Unknown command: {cmd}\n\n\
                  Send /start to see the list of available commands."
-            ))
+            )))
         }
     }
 }
 
-fn cmd_start() -> String {
-    welcome_text()
+/// Returns the welcome message with quick reply buttons.
+///
+/// Used both as the `/start` response and the initial chat greeting.
+pub(crate) fn welcome_message() -> MessageContent {
+    cmd_start()
 }
 
-fn cmd_mybots(store: &BotStore) -> String {
+fn cmd_start() -> MessageContent {
+    MessageContent {
+        text: welcome_text(),
+        quick_replies: vec![
+            QuickReplyButton {
+                label: "Create a Bot".to_string(),
+                action: "/newbot".to_string(),
+                style: ButtonStyle::Primary,
+            },
+            QuickReplyButton {
+                label: "My Bots".to_string(),
+                action: "/mybots".to_string(),
+                style: ButtonStyle::Secondary,
+            },
+            QuickReplyButton {
+                label: "Help".to_string(),
+                action: "/help".to_string(),
+                style: ButtonStyle::Subtle,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+fn cmd_mybots(store: &BotStore) -> MessageContent {
     match store.list_bots() {
-        Ok(bots) if bots.is_empty() => {
-            "You haven't created any bots yet.\n\n\
-             Use /newbot to create your first bot!"
-                .to_string()
-        }
+        Ok(bots) if bots.is_empty() => MessageContent {
+            text: "You haven't created any bots yet.\n\n\
+                   Use /newbot to create your first bot!"
+                .to_string(),
+            quick_replies: vec![QuickReplyButton {
+                label: "Create a Bot".to_string(),
+                action: "/newbot".to_string(),
+                style: ButtonStyle::Primary,
+            }],
+            ..Default::default()
+        },
         Ok(bots) => {
             let mut msg = format!(
                 "Your bots ({} total):\n\n",
@@ -143,12 +192,25 @@ fn cmd_mybots(store: &BotStore) -> String {
                     bot.username
                 ));
             }
-            msg.push_str(
-                "\nEnter a number or username to manage a bot.",
-            );
-            msg
+            msg.push_str("\nTap a bot to manage it.");
+
+            let quick_replies = bots
+                .iter()
+                .enumerate()
+                .map(|(i, bot)| QuickReplyButton {
+                    label: format!("@{}", bot.username),
+                    action: format!("{}", i + 1),
+                    style: ButtonStyle::Secondary,
+                })
+                .collect();
+
+            MessageContent {
+                text: msg,
+                quick_replies,
+                ..Default::default()
+            }
         }
-        Err(e) => format!("Failed to list bots: {e}"),
+        Err(e) => plain(format!("Failed to list bots: {e}")),
     }
 }
 
@@ -178,9 +240,11 @@ fn handle_awaiting_username(
     username: &str,
     store: &BotStore,
     server_port: u16,
-) -> String {
+) -> MessageContent {
     if let Err(reason) = validate_username(username) {
-        return format!("{reason}\n\nPlease enter a different username:");
+        return plain(format!(
+            "{reason}\n\nPlease enter a different username:"
+        ));
     }
 
     match store.create_bot(name, username) {
@@ -191,13 +255,13 @@ fn handle_awaiting_username(
         Err(e) => {
             let msg = e.to_string();
             if msg.contains("already taken") {
-                format!(
+                plain(format!(
                     "The username @{username} is already taken. \
                      Please choose another:"
-                )
+                ))
             } else {
                 *state = DialogState::Idle;
-                format!("Failed to create bot: {e}")
+                plain(format!("Failed to create bot: {e}"))
             }
         }
     }
@@ -230,18 +294,25 @@ fn validate_username(username: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn format_bot_created(bot: &BotInfo, server_port: u16) -> String {
-    format!(
-        "Done! Your new bot \"{name}\" (@{username}) is ready.\n\n\
-         Token: `{token}`\n\n\
-         To connect with crew-rs:\n\
-         1. Set API URL to: http://localhost:{server_port}\n\
-         2. Paste the token above into your crew-rs config\n\n\
-         Use /mybots to manage your bots.",
-        name = bot.name,
-        username = bot.username,
-        token = bot.token,
-    )
+fn format_bot_created(bot: &BotInfo, server_port: u16) -> MessageContent {
+    MessageContent {
+        text: format!(
+            "Done! Your new bot \"{name}\" (@{username}) is ready.\n\n\
+             Token: `{token}`\n\n\
+             To connect with crew-rs:\n\
+             1. Set API URL to: http://localhost:{server_port}\n\
+             2. Paste the token above into your crew-rs config",
+            name = bot.name,
+            username = bot.username,
+            token = bot.token,
+        ),
+        quick_replies: vec![QuickReplyButton {
+            label: "My Bots".to_string(),
+            action: "/mybots".to_string(),
+            style: ButtonStyle::Secondary,
+        }],
+        ..Default::default()
+    }
 }
 
 fn handle_managing_bot_input(
@@ -387,15 +458,17 @@ pub fn resolve_bot_selection(
     state: &mut DialogState,
     input: &str,
     store: &BotStore,
-) -> String {
+) -> MessageContent {
     let bots = match store.list_bots() {
         Ok(b) => b,
-        Err(e) => return format!("Failed to list bots: {e}"),
+        Err(e) => return plain(format!("Failed to list bots: {e}")),
     };
 
     if bots.is_empty() {
         *state = DialogState::Idle;
-        return "No bots to manage. Use /newbot to create one.".to_string();
+        return plain(
+            "No bots to manage. Use /newbot to create one.".to_string(),
+        );
     }
 
     // Try to match by index (1-based)
@@ -404,20 +477,20 @@ pub fn resolve_bot_selection(
         && idx <= bots.len()
     {
         let bot = &bots[idx - 1];
-        return enter_management_menu(state, bot);
+        return plain(enter_management_menu(state, bot));
     }
 
     // Try to match by @username
     let username = input.trim_start_matches('@');
     if let Some(bot) = bots.iter().find(|b| b.username == username) {
-        return enter_management_menu(state, bot);
+        return plain(enter_management_menu(state, bot));
     }
 
-    format!(
+    plain(format!(
         "No matching bot found. \
          Please enter a valid number (1-{}) or username:",
         bots.len()
-    )
+    ))
 }
 
 fn enter_management_menu(state: &mut DialogState, bot: &BotInfo) -> String {
@@ -453,10 +526,21 @@ mod tests {
     fn test_botfather_start_command() {
         let store = test_store();
         let mut state = DialogState::default();
-        let response = process_input(&mut state, "/start", &store, 8488);
-        assert!(response.contains("Welcome"));
-        assert!(response.contains("/newbot"));
-        assert!(response.contains("/mybots"));
+        let r = process_input(&mut state, "/start", &store, 8488);
+        assert!(r.text.contains("Welcome"));
+        assert!(r.text.contains("/newbot"));
+        assert!(r.text.contains("/mybots"));
+    }
+
+    #[test]
+    fn test_start_returns_quick_replies() {
+        let store = test_store();
+        let mut state = DialogState::default();
+        let r = process_input(&mut state, "/start", &store, 8488);
+        assert_eq!(r.quick_replies.len(), 3);
+        assert_eq!(r.quick_replies[0].action, "/newbot");
+        assert_eq!(r.quick_replies[1].action, "/mybots");
+        assert_eq!(r.quick_replies[2].action, "/help");
     }
 
     #[test]
@@ -465,20 +549,34 @@ mod tests {
         let mut state = DialogState::default();
 
         let r = process_input(&mut state, "/newbot", &store, 8488);
-        assert!(r.contains("name"));
+        assert!(r.text.contains("name"));
 
         let r = process_input(&mut state, "Weather Bot", &store, 8488);
-        assert!(r.contains("username"));
+        assert!(r.text.contains("username"));
 
         let r = process_input(&mut state, "weather_bot", &store, 8488);
-        assert!(r.contains("Done"));
-        assert!(r.contains("Token"));
+        assert!(r.text.contains("Done"));
+        assert!(r.text.contains("Token"));
 
         // Verify bot exists in store
         let bots = store.list_bots().unwrap();
         assert_eq!(bots.len(), 1);
         assert_eq!(bots[0].name, "Weather Bot");
         assert_eq!(bots[0].username, "weather_bot");
+    }
+
+    #[test]
+    fn test_newbot_token_in_backticks() {
+        let store = test_store();
+        let mut state = DialogState::default();
+        let _ = process_input(&mut state, "/newbot", &store, 8488);
+        let _ = process_input(&mut state, "Demo", &store, 8488);
+        let r = process_input(&mut state, "demo_bot", &store, 8488);
+
+        let bot = store.list_bots().unwrap().pop().unwrap();
+        assert!(r.text.contains(&format!("`{}`", bot.token)));
+        assert_eq!(r.quick_replies.len(), 1);
+        assert_eq!(r.quick_replies[0].action, "/mybots");
     }
 
     #[test]
@@ -494,7 +592,7 @@ mod tests {
             &store,
             8488,
         );
-        assert!(r.contains("lowercase"));
+        assert!(r.text.contains("lowercase"));
         assert!(matches!(
             state,
             DialogState::AwaitingUsername { .. }
@@ -510,7 +608,7 @@ mod tests {
             name: "Second".into(),
         };
         let r = process_input(&mut state, "weather_bot", &store, 8488);
-        assert!(r.contains("already taken"));
+        assert!(r.text.contains("already taken"));
         assert!(matches!(
             state,
             DialogState::AwaitingUsername { .. }
@@ -518,25 +616,30 @@ mod tests {
     }
 
     #[test]
-    fn test_botfather_mybots() {
+    fn test_mybots_returns_quick_replies() {
         let store = test_store();
-        store.create_bot("Weather Bot", "weather_bot").unwrap();
-        store.create_bot("Code Bot", "code_bot").unwrap();
+        store.create_bot("Alpha", "alpha_bot").unwrap();
+        store.create_bot("Beta", "beta_bot").unwrap();
 
         let mut state = DialogState::default();
         let r = process_input(&mut state, "/mybots", &store, 8488);
-        assert!(r.contains("2"));
-        assert!(r.contains("Weather Bot"));
-        assert!(r.contains("Code Bot"));
+        assert!(r.text.contains("Your bots (2 total)"));
+        assert_eq!(r.quick_replies.len(), 2);
+        assert_eq!(r.quick_replies[0].label, "@alpha_bot");
+        assert_eq!(r.quick_replies[0].action, "1");
+        assert_eq!(r.quick_replies[1].label, "@beta_bot");
+        assert_eq!(r.quick_replies[1].action, "2");
     }
 
     #[test]
-    fn test_botfather_mybots_empty() {
+    fn test_mybots_empty_returns_newbot_button() {
         let store = test_store();
         let mut state = DialogState::default();
         let r = process_input(&mut state, "/mybots", &store, 8488);
-        assert!(r.contains("haven't created any bots"));
-        assert!(r.contains("/newbot"));
+        assert!(r.text.contains("haven't created any bots"));
+        assert_eq!(r.quick_replies.len(), 1);
+        assert_eq!(r.quick_replies[0].label, "Create a Bot");
+        assert_eq!(r.quick_replies[0].action, "/newbot");
     }
 
     #[test]
@@ -548,8 +651,8 @@ mod tests {
             token: bot.token.clone(),
         };
         let r = process_input(&mut state, "1", &store, 8488);
-        assert!(r.contains(&bot.token));
-        assert!(r.contains("crew-rs"));
+        assert!(r.text.contains(&bot.token));
+        assert!(r.text.contains("crew-rs"));
     }
 
     #[test]
@@ -562,8 +665,8 @@ mod tests {
             token: old_token.clone(),
         };
         let r = process_input(&mut state, "3", &store, 8488);
-        assert!(r.contains("revoked"));
-        assert!(!r.contains(&old_token));
+        assert!(r.text.contains("revoked"));
+        assert!(!r.text.contains(&old_token));
 
         // Old token should no longer work
         assert!(store.get_bot_by_token(&old_token).unwrap().is_none());
@@ -577,9 +680,8 @@ mod tests {
         let mut state = DialogState::ManagingBot {
             token: bot.token.clone(),
         };
-        // Select "Edit Name"
         let r = process_input(&mut state, "2", &store, 8488);
-        assert!(r.contains("new name"));
+        assert!(r.text.contains("new name"));
 
         let r = process_input(
             &mut state,
@@ -587,8 +689,8 @@ mod tests {
             &store,
             8488,
         );
-        assert!(r.contains("updated"));
-        assert!(r.contains("Weather Master"));
+        assert!(r.text.contains("updated"));
+        assert!(r.text.contains("Weather Master"));
     }
 
     #[test]
@@ -599,14 +701,12 @@ mod tests {
         let mut state = DialogState::ManagingBot {
             token: bot.token.clone(),
         };
-        // Select "Delete Bot"
         let r = process_input(&mut state, "4", &store, 8488);
-        assert!(r.contains("Are you sure"));
+        assert!(r.text.contains("Are you sure"));
 
         let r = process_input(&mut state, "confirm delete", &store, 8488);
-        assert!(r.contains("deleted"));
+        assert!(r.text.contains("deleted"));
 
-        // Verify bot is gone
         assert!(store.list_bots().unwrap().is_empty());
     }
 
@@ -615,16 +715,26 @@ mod tests {
         let store = test_store();
         let mut state = DialogState::default();
         let r = process_input(&mut state, "some random text", &store, 8488);
-        assert!(r.contains("/start"));
+        assert!(r.text.contains("/start"));
+    }
+
+    #[test]
+    fn test_resolve_bot_selection_returns_message_content() {
+        let store = test_store();
+        store.create_bot("Test", "test_bot").unwrap();
+        let mut state = DialogState::default();
+        let r = resolve_bot_selection(&mut state, "1", &store);
+        assert!(r.text.contains("test_bot"));
+        assert!(r.text.contains("Managing"));
     }
 
     #[test]
     fn test_username_validation() {
-        assert!(validate_username("ab").is_err()); // too short
-        assert!(validate_username("a".repeat(33).as_str()).is_err()); // too long
-        assert!(validate_username("UPPER_bot").is_err()); // uppercase
-        assert!(validate_username("no spaces bot").is_err()); // spaces
-        assert!(validate_username("noending").is_err()); // no bot suffix
+        assert!(validate_username("ab").is_err());
+        assert!(validate_username("a".repeat(33).as_str()).is_err());
+        assert!(validate_username("UPPER_bot").is_err());
+        assert!(validate_username("no spaces bot").is_err());
+        assert!(validate_username("noending").is_err());
         assert!(validate_username("good_bot").is_ok());
         assert!(validate_username("mybot").is_ok());
         assert!(validate_username("test123_bot").is_ok());
