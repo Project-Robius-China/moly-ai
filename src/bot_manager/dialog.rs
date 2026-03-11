@@ -2,6 +2,24 @@
 
 use moly_kit::aitk::telegram_server::{BotInfo, BotStore, BotUpdate};
 
+/// Canonical command reference — the **single source of truth** for every
+/// place that lists BotFather commands (welcome message, `/start`, `/help`,
+/// and the settings panel).
+pub const COMMAND_LIST: &str = "\
+/newbot  — Create a new bot\n\
+/mybots  — Manage your bots\n\
+/start   — Show welcome message\n\
+/help    — Show help\n\
+/cancel  — Cancel current operation";
+
+/// Build the canonical welcome text from [`COMMAND_LIST`].
+pub fn welcome_text() -> String {
+    format!(
+        "Welcome to BotFather! I can help you create and manage bots.\n\n\
+         Available commands:\n{COMMAND_LIST}"
+    )
+}
+
 /// BotFather dialog states for multi-step wizards.
 #[derive(Debug, Clone, Default)]
 pub enum DialogState {
@@ -102,15 +120,7 @@ fn try_command(
 }
 
 fn cmd_start() -> String {
-    "\
-Welcome to BotFather! I can help you create and manage bots.
-
-Available commands:
-/newbot — Create a new bot
-/mybots — Manage your bots
-/cancel — Cancel current operation
-/help — Show help"
-        .to_string()
+    welcome_text()
 }
 
 fn cmd_mybots(store: &BotStore) -> String {

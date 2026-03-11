@@ -5,6 +5,6 @@
 //! dialog steps to create, edit, and manage bots.
 
 mod client;
-mod dialog;
+pub(crate) mod dialog;
 
 pub use client::BotFatherClient;
