@@ -1,5 +1,4 @@
 pub mod add_provider_modal;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod botfather_view;
 pub mod moly_server_screen;
 pub mod provider_view;
@@ -12,7 +11,6 @@ use makepad_widgets::Cx;
 pub fn live_design(cx: &mut Cx) {
     providers_screen::live_design(cx);
     moly_server_screen::live_design(cx);
-    #[cfg(not(target_arch = "wasm32"))]
     botfather_view::live_design(cx);
     provider_view::live_design(cx);
     providers::live_design(cx);

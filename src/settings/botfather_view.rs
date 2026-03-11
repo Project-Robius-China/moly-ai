@@ -1,4 +1,3 @@
-use crate::bot_manager::dialog::COMMAND_LIST;
 use makepad_widgets::*;
 
 live_design! {
@@ -190,13 +189,14 @@ impl BotFatherView {
         cx: &mut Cx,
         bot_count: usize,
         server_port: u16,
+        command_list: &str,
     ) {
         self.label(ids!(bot_count_value))
             .set_text(cx, &bot_count.to_string());
         self.label(ids!(api_address_value))
             .set_text(cx, &format!("localhost:{server_port}"));
         self.label(ids!(commands_content))
-            .set_text(cx, COMMAND_LIST);
+            .set_text(cx, command_list);
     }
 }
 
@@ -207,9 +207,10 @@ impl BotFatherViewRef {
         cx: &mut Cx,
         bot_count: usize,
         server_port: u16,
+        command_list: &str,
     ) {
         if let Some(mut inner) = self.borrow_mut() {
-            inner.set_data(cx, bot_count, server_port);
+            inner.set_data(cx, bot_count, server_port, command_list);
         }
     }
 }

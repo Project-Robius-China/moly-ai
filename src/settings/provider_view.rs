@@ -1,7 +1,6 @@
 use makepad_widgets::*;
 use moly_kit::prelude::*;
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::settings::botfather_view::BotFatherViewWidgetExt;
 
 use crate::data::{
@@ -17,7 +16,6 @@ live_design! {
     use crate::shared::widgets::*;
     use crate::shared::styles::*;
 
-    #[cfg(not(target_arch = "wasm32"))]
     use crate::settings::botfather_view::*;
 
     REFRESH_ICON = dep("crate://self/resources/images/refresh_icon.png")
@@ -216,7 +214,6 @@ live_design! {
                 }
             }
 
-            #[cfg(not(target_arch = "wasm32"))]
             botfather_content = <BotFatherView> {}
 
             api_fields_group = <View> {
@@ -514,7 +511,12 @@ impl Widget for ProviderView {
                 .unwrap_or(0);
             let port = store.preferences.bot_server_port;
             self.bot_father_view(ids!(botfather_content))
-                .set_data(cx, bot_count, port);
+                .set_data(
+                    cx,
+                    bot_count,
+                    port,
+                    crate::bot_manager::dialog::COMMAND_LIST,
+                );
         }
 
         let mut models = store.chats.get_provider_models(&self.provider.id);
