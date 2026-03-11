@@ -49,8 +49,8 @@ pub(crate) fn build_wav(
     wav_bytes.extend_from_slice(&(1u16.to_le_bytes())); // PCM format
     wav_bytes.extend_from_slice(&(channels).to_le_bytes());
     wav_bytes.extend_from_slice(&(sample_rate).to_le_bytes());
-    wav_bytes.extend_from_slice(&((sample_rate * (channels as u32) * 2) as u32).to_le_bytes()); // byte rate
-    wav_bytes.extend_from_slice(&((channels * 2) as u16).to_le_bytes()); // block align
+    wav_bytes.extend_from_slice(&(sample_rate * (channels as u32) * 2).to_le_bytes()); // byte rate
+    wav_bytes.extend_from_slice(&(channels * 2).to_le_bytes()); // block align
     wav_bytes.extend_from_slice(&(16u16.to_le_bytes())); // bits per sample
 
     // data chunk

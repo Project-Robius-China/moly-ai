@@ -197,7 +197,7 @@ impl Widget for MessageThinkingBlock {
 
 impl WidgetMatchEvent for MessageThinkingBlock {
     fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, _scope: &mut Scope) {
-        if let Some(_evt) = self.view(ids!(collapse)).finger_up(&actions) {
+        if let Some(_evt) = self.view(ids!(collapse)).finger_up(actions) {
             self.toggle_collapse(cx);
         }
     }

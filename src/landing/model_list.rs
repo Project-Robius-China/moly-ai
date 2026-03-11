@@ -165,8 +165,8 @@ impl Widget for ModelList {
 
         let mut items = Vec::new();
 
-        if store.search.keyword.is_none() {
-            if !agents.is_empty() {
+        if store.search.keyword.is_none()
+            && !agents.is_empty() {
                 items.push(Item::Header("Featured Agents"));
                 items.extend(agents.chunks(3).map(|chunk| Item::AgentRow {
                     agents: chunk,
@@ -176,7 +176,6 @@ impl Widget for ModelList {
                     *margin_bottom = 0.0;
                 }
             }
-        }
 
         items.push(Item::Header("Models"));
         items.extend(store.search.models.iter().map(Item::Model));
@@ -271,7 +270,7 @@ impl WidgetMatchEvent for ModelList {
         }
 
         for action in actions.iter() {
-            if let Some(_) = action.downcast_ref::<SearchAction>() {
+            if action.downcast_ref::<SearchAction>().is_some() {
                 self.loading_delay = cx.start_timeout(0.2);
             }
 

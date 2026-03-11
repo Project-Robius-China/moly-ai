@@ -68,7 +68,7 @@ impl Widget for Avatar {
                 EntityAvatar::Text(grapheme) => {
                     self.view(ids!(grapheme)).set_visible(cx, true);
                     self.view(ids!(dependency)).set_visible(cx, false);
-                    self.label(ids!(label)).set_text(cx, &grapheme);
+                    self.label(ids!(label)).set_text(cx, grapheme);
                 }
                 EntityAvatar::Image(path) => {
                     self.view(ids!(dependency)).set_visible(cx, true);

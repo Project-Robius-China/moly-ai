@@ -480,12 +480,11 @@ impl ChatView {
         if self.message_updated_while_inactive {
             // If the message is done writing, and this chat view is not focused
             // set the chat as having unread messages (show a badge on the chat history card)
-            if !self.chat(ids!(chat)).read().is_streaming() && !self.focused {
-                if let Some(chat) = store.chats.get_chat_by_id(self.chat_id) {
+            if !self.chat(ids!(chat)).read().is_streaming() && !self.focused
+                && let Some(chat) = store.chats.get_chat_by_id(self.chat_id) {
                     chat.borrow_mut().has_unread_messages = true;
                     self.message_updated_while_inactive = false;
                 }
-            }
         }
     }
 

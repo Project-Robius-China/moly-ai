@@ -94,9 +94,9 @@ impl WidgetNode for ModelFilesList {
 }
 
 impl ModelFilesList {
-    fn draw_files(&mut self, cx: &mut Cx2d, files_info: &Vec<FileWithDownloadInfo>) {
-        for i in 0..files_info.len() {
-            let item_id = LiveId(i as u64).into();
+    fn draw_files(&mut self, cx: &mut Cx2d, files_info: &[FileWithDownloadInfo]) {
+        for (i, file_info) in files_info.iter().enumerate() {
+            let item_id = LiveId(i as u64);
 
             let item_widget = self
                 .items
@@ -104,10 +104,10 @@ impl ModelFilesList {
 
             item_widget
                 .as_model_files_item()
-                .set_file(cx, files_info[i].file.clone());
+                .set_file(cx, file_info.file.clone());
 
-            let mut scope = Scope::with_props(&files_info[i]);
-            let _ = item_widget.draw_all(cx, &mut scope);
+            let mut scope = Scope::with_props(file_info);
+            item_widget.draw_all(cx, &mut scope);
         }
     }
 }

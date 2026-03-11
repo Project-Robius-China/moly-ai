@@ -42,14 +42,14 @@ pub struct Search {
 
 impl Search {
     pub fn new(moly_client: MolyClient) -> Self {
-        let search = Self {
+        
+        Self {
             moly_client,
             models: Vec::new(),
             sorted_by: SortCriteria::MostDownloads,
             keyword: None,
             state: SearchState::Idle,
-        };
-        search
+        }
     }
 
     pub fn load_featured_models(&mut self) {

@@ -162,9 +162,11 @@ pub enum ProviderFetchModelsResult {
 
 #[derive(Live, LiveHook, PartialEq, Debug, LiveRead, Serialize, Deserialize, Clone)]
 // Note: Aliases are used to support old casing styles in saved data.
+#[derive(Default)]
 pub enum ProviderType {
     #[pick]
     #[serde(alias = "OpenAI")]
+    #[default]
     OpenAi,
     #[serde(alias = "OpenAIImage")]
     OpenAiImage,
@@ -196,15 +198,7 @@ impl ProviderType {
     /// Providers like OpenClaw and CrewRs manage models internally,
     /// so the model selection UI should be hidden.
     pub fn has_model_selection(&self) -> bool {
-        match self {
-            ProviderType::OpenClaw | ProviderType::CrewRs => false,
-            _ => true,
-        }
+        !matches!(self, ProviderType::OpenClaw | ProviderType::CrewRs)
     }
 }
 
-impl Default for ProviderType {
-    fn default() -> Self {
-        ProviderType::OpenAi
-    }
-}

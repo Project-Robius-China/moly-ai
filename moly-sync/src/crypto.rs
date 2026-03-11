@@ -57,9 +57,9 @@ pub fn encrypt_json(json_data: &str, pin: &str) -> Result<String> {
 
     // Create encrypted data structure
     let encrypted_data = EncryptedData {
-        salt: BASE64.encode(&salt),
-        nonce: BASE64.encode(&nonce_bytes),
-        data: BASE64.encode(&ciphertext),
+        salt: BASE64.encode(salt),
+        nonce: BASE64.encode(nonce_bytes),
+        data: BASE64.encode(ciphertext),
     };
 
     // Return as JSON string

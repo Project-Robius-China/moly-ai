@@ -57,6 +57,7 @@ live_design! {
     }
 }
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub enum SearchBarState {
     #[default]
@@ -105,7 +106,7 @@ impl Widget for LandingScreen {
 impl WidgetMatchEvent for LandingScreen {
     fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, scope: &mut Scope) {
         for action in actions.iter() {
-            if let Some(_) = action.downcast_ref::<SearchAction>() {
+            if action.downcast_ref::<SearchAction>().is_some() {
                 self.redraw(cx);
             }
 

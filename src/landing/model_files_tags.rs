@@ -72,13 +72,13 @@ impl Widget for ModelFilesTags {
 }
 
 impl ModelFilesTagsRef {
-    pub fn set_tags(&self, cx: &mut Cx, tags: &Vec<String>) {
+    pub fn set_tags(&self, cx: &mut Cx, tags: &[String]) {
         let Some(mut tags_widget) = self.borrow_mut() else {
             return;
         };
         tags_widget.items.clear();
         for (i, tag) in tags.iter().enumerate() {
-            let item_id = LiveId(i as u64).into();
+            let item_id = LiveId(i as u64);
             let item_widget = WidgetRef::new_from_ptr(cx, tags_widget.template);
             item_widget.apply_over(cx, live! {label = { text: (tag) }});
             tags_widget.items.insert(item_id, item_widget);

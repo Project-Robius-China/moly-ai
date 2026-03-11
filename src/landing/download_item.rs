@@ -233,7 +233,7 @@ impl Widget for DownloadItem {
             .set_text(cx, download.model.architecture.as_str());
 
         self.label(ids!(params_size_tag.caption))
-            .set_text(cx, &&download.model.requires.as_str());
+            .set_text(cx, download.model.requires.as_str());
 
         let progress_bar_width = download.progress * 6.0; // 6.0 = 600px / 100%
         let label = self.label(ids!(progress));
@@ -346,26 +346,25 @@ impl Widget for DownloadItem {
 impl WidgetMatchEvent for DownloadItem {
     fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, _scope: &mut Scope) {
         for actions in actions {
-            if let Some(action) = actions.downcast_ref::<DownloadFileAction>() {
-                if self.file_id.as_ref() == Some(&action.file_id) {
+            if let Some(action) = actions.downcast_ref::<DownloadFileAction>()
+                && self.file_id.as_ref() == Some(&action.file_id) {
                     self.redraw(cx);
                 }
-            }
         }
 
         for button_id in [ids!(play_button), ids!(retry_button)] {
-            if self.button(button_id).clicked(&actions) {
+            if self.button(button_id).clicked(actions) {
                 let Some(file_id) = &self.file_id else { return };
                 cx.action(DownloadAction::Play(file_id.clone()));
             }
         }
 
-        if self.button(ids!(pause_button)).clicked(&actions) {
+        if self.button(ids!(pause_button)).clicked(actions) {
             let Some(file_id) = &self.file_id else { return };
             cx.action(DownloadAction::Pause(file_id.clone()));
         }
 
-        if self.button(ids!(cancel_button)).clicked(&actions) {
+        if self.button(ids!(cancel_button)).clicked(actions) {
             let Some(file_id) = &self.file_id else { return };
             cx.action(DownloadAction::Cancel(file_id.clone()));
         }

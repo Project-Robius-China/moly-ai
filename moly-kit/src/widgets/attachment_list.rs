@@ -90,6 +90,7 @@ pub struct AttachmentList {
     pub attachments: Vec<Attachment>,
 
     #[rust]
+    #[allow(clippy::type_complexity)]
     pub on_tap: Option<Box<dyn FnMut(&mut AttachmentList, usize) + 'static>>,
 }
 
@@ -183,12 +184,10 @@ impl Widget for ItemView {
 
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
         self.deref.handle_event(cx, event, scope);
-        if let Hit::FingerUp(fu) = event.hits(cx, self.area()) {
-            if fu.was_tap() {
-                if let Some(on_tap) = &mut self.on_tap {
+        if let Hit::FingerUp(fu) = event.hits(cx, self.area())
+            && fu.was_tap()
+                && let Some(on_tap) = &mut self.on_tap {
                     on_tap();
                 }
-            }
-        }
     }
 }

@@ -611,11 +611,9 @@ impl Widget for Realtime {
         if let Some(_value) = self
             .drop_down(ids!(transcription_model_selector))
             .changed(event.actions())
-        {
-            if self.is_connected {
+            && self.is_connected {
                 self.update_session_config(cx);
             }
-        }
 
         if let Some(enabled) = self
             .check_box(ids!(toggle_interruptions))
@@ -643,8 +641,7 @@ impl Widget for Realtime {
 
         if !self.audio_setup_done
             && let Event::PermissionResult(pr) = event
-        {
-            if pr.permission == Permission::AudioInput {
+            && pr.permission == Permission::AudioInput {
                 match pr.status {
                     PermissionStatus::Granted => {
                         self.mic_permission_status = MicPermissionStatus::Granted;
@@ -668,7 +665,6 @@ impl Widget for Realtime {
                     }
                 }
             }
-        }
 
         if self.audio_setup_done {
             // Try to start pending conversation if we got connected
@@ -676,8 +672,8 @@ impl Widget for Realtime {
         }
 
         // Handle audio streaming timer
-        if let Some(timer) = &self.audio_streaming_timer {
-            if timer.is_event(event).is_some() && self.conversation_active {
+        if let Some(timer) = &self.audio_streaming_timer
+            && timer.is_event(event).is_some() && self.conversation_active {
                 self.send_audio_chunk_to_realtime(cx);
 
                 // Check if we should resume recording when playback buffer is empty
@@ -689,8 +685,8 @@ impl Widget for Realtime {
                     if !interruptions_enabled {
                         // Only auto-resume recording if interruptions are disabled
                         // (when interruptions are enabled, recording control is handled elsewhere)
-                        if let Ok(mut should_record) = self.should_record.try_lock() {
-                            if !*should_record && self.conversation_active && !self.ai_is_responding
+                        if let Ok(mut should_record) = self.should_record.try_lock()
+                            && !*should_record && self.conversation_active && !self.ai_is_responding
                             {
                                 ::log::debug!(
                                     "Auto-resuming recording - playback empty and interruptions disabled"
@@ -699,11 +695,9 @@ impl Widget for Realtime {
                                 self.label(ids!(status_label))
                                     .set_text(cx, "🎤 Listening...");
                             }
-                        }
                     }
                 }
             }
-        }
     }
 
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
@@ -948,8 +942,8 @@ impl Realtime {
 
     fn send_audio_chunk_to_realtime(&mut self, _cx: &mut Cx) {
         // Collect audio data and send to realtime client
-        if let Ok(mut recorded) = self.recorded_audio.try_lock() {
-            if !recorded.is_empty() {
+        if let Ok(mut recorded) = self.recorded_audio.try_lock()
+            && !recorded.is_empty() {
                 let audio_data = recorded.clone();
                 recorded.clear();
 
@@ -961,7 +955,6 @@ impl Realtime {
                         .unbounded_send(RealtimeCommand::SendAudio(pcm16_data));
                 }
             }
-        }
     }
 
     /// Common reset logic for both user-initiated reset and connection loss
@@ -1454,10 +1447,10 @@ impl Realtime {
 
         // Audio input callback - capture for realtime streaming
         cx.audio_input(0, move |info, input_buffer| {
-            if let Ok(should_record_guard) = should_record.try_lock() {
-                if let Ok(is_muted_guard) = is_muted.try_lock() {
-                    if *should_record_guard && !*is_muted_guard {
-                        if let Ok(mut recorded) = recorded_audio.try_lock() {
+            if let Ok(should_record_guard) = should_record.try_lock()
+                && let Ok(is_muted_guard) = is_muted.try_lock()
+                    && *should_record_guard && !*is_muted_guard
+                        && let Ok(mut recorded) = recorded_audio.try_lock() {
                             let channel = input_buffer.channel(0);
 
                             // Calculate downsampling ratio from input sample rate to 24kHz
@@ -1472,9 +1465,6 @@ impl Realtime {
                                 recorded.push(channel[i]);
                             }
                         }
-                    }
-                }
-            }
         });
 
         let playback_audio = self.playback_audio.clone();
@@ -1486,9 +1476,9 @@ impl Realtime {
             // Always start with silence
             output_buffer.zero();
 
-            if let Ok(mut playback) = playback_audio.try_lock() {
-                if let Ok(mut pos) = playback_position.try_lock() {
-                    if let Ok(mut playing) = is_playing.try_lock() {
+            if let Ok(mut playback) = playback_audio.try_lock()
+                && let Ok(mut pos) = playback_position.try_lock()
+                    && let Ok(mut playing) = is_playing.try_lock() {
                         // Check if we should continue playing
                         let input_sample_rate = 24000.0; // Input audio sample rate
                         let output_sample_rate = info.sample_rate;
@@ -1555,8 +1545,6 @@ impl Realtime {
                             }
                         }
                     }
-                }
-            }
         });
 
         self.audio_setup_done = true;
@@ -1568,8 +1556,8 @@ impl Realtime {
 
         if let Ok(mut playback) = self.playback_audio.try_lock() {
             // If we're not currently playing, start fresh playback immediately
-            if let Ok(mut is_playing) = self.is_playing.try_lock() {
-                if !*is_playing {
+            if let Ok(mut is_playing) = self.is_playing.try_lock()
+                && !*is_playing {
                     // Clear old audio data and start fresh playback
                     playback.clear();
                     *self.playback_position.lock().unwrap() = 0;
@@ -1579,7 +1567,6 @@ impl Realtime {
                         samples.len()
                     );
                 }
-            }
 
             playback.extend_from_slice(&samples);
         }
@@ -1589,7 +1576,7 @@ impl Realtime {
         let mut pcm16_bytes = Vec::with_capacity(samples.len() * 2);
 
         for &sample in samples {
-            let clamped = sample.max(-1.0).min(1.0);
+            let clamped = sample.clamp(-1.0, 1.0);
             let pcm16_sample = (clamped * 32767.0) as i16;
             pcm16_bytes.extend_from_slice(&pcm16_sample.to_le_bytes());
         }

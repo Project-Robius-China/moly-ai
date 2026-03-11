@@ -107,7 +107,7 @@ impl AttachmentView {
                 self.attachment
                     .content_type
                     .as_deref()
-                    .map(|s| s.split('/').last().unwrap_or_default().to_uppercase())
+                    .map(|s| s.split('/').next_back().unwrap_or_default().to_uppercase())
                     .unwrap_or_default()
                     .as_str(),
             );

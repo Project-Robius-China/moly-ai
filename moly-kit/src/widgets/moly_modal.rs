@@ -98,13 +98,11 @@ impl Widget for MolyModal {
             let content_rec = self.content.area().rect(cx);
             if let Hit::FingerUp(fe) =
                 event.hits_with_sweep_area(cx, self.draw_bg.area(), self.draw_bg.area())
-            {
-                if !content_rec.contains(fe.abs) {
+                && !content_rec.contains(fe.abs) {
                     let widget_uid = self.content.widget_uid();
                     cx.widget_action(widget_uid, &scope.path, MolyModalAction::Dismissed);
                     self.close(cx);
                 }
-            }
         }
 
         self.ui_runner().handle(cx, event, scope, self);
@@ -268,6 +266,6 @@ impl MolyModalRef {
     }
 
     pub fn is_open(&self) -> bool {
-        self.borrow().map_or(false, |inner| inner.is_open())
+        self.borrow().is_some_and(|inner| inner.is_open())
     }
 }

@@ -285,7 +285,7 @@ impl BotClient for CrewRsClient {
                 }
 
                 // Yield periodically to reduce back-pressure
-                if message_count % yield_frequency == 0
+                if message_count.is_multiple_of(yield_frequency)
                     || message_count < 20
                 {
                     yield ClientResult::new_ok(content.clone());

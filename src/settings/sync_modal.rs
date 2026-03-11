@@ -387,11 +387,10 @@ impl WidgetMatchEvent for SyncModal {
             self.show_import(cx);
         }
 
-        if self.view(ids!(import)).finger_down(actions).is_some() {
-            if let SyncStatus::None = self.sync_status {
+        if self.view(ids!(import)).finger_down(actions).is_some()
+            && let SyncStatus::None = self.sync_status {
                 self.import();
             }
-        }
 
         if let Some(selected_sync_mode) = self
             .radio_button_set(ids_array!(radios.radio_merge, radios.radio_replace))
@@ -559,11 +558,10 @@ fn get_local_ip_address() -> String {
     let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind socket");
 
     // This address doesn't need to be reachable — it's just to force the OS to assign a local IP
-    if socket.connect("8.8.8.8:80").is_ok() {
-        if let Ok(local_addr) = socket.local_addr() {
+    if socket.connect("8.8.8.8:80").is_ok()
+        && let Ok(local_addr) = socket.local_addr() {
             return local_addr.ip().to_string();
         }
-    }
 
     // Fallback if all else fails
     "localhost".to_string()

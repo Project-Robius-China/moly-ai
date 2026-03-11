@@ -404,7 +404,7 @@ impl Widget for ModelCard {
         self.label(ids!(author_description))
             .set_text(cx, author_description);
 
-        let released_at_str = formatted_model_release_date(&model);
+        let released_at_str = formatted_model_release_date(model);
         self.label(ids!(model_released_at_tag.attr_value))
             .set_text(cx, &released_at_str);
 

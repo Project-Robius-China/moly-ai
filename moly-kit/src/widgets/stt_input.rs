@@ -138,14 +138,13 @@ impl Widget for SttInput {
         self.ui_runner().handle(cx, event, scope, self);
         self.deref.handle_event(cx, event, scope);
 
-        if self.timer.is_event(event).is_some() {
-            if let SttInputState::Recording(recording_state) = &self.state {
+        if self.timer.is_event(event).is_some()
+            && let SttInputState::Recording(recording_state) = &self.state {
                 let elapsed = Cx::time_now() - recording_state.start_time;
                 self.label(ids!(status))
                     .set_text(cx, &time_to_minutes_seconds(elapsed));
                 self.timer = cx.start_timeout(TIMER_PRECISION);
             }
-        }
 
         if self.button(ids!(confirm)).clicked(event.actions()) {
             self.finish_recording(cx, scope);
@@ -326,7 +325,7 @@ impl SttInput {
         actions
             .find_widget_action(self.widget_uid())
             .and_then(|widget_action| widget_action.downcast_ref::<SttInputAction>())
-            .map_or(false, |action| matches!(action, SttInputAction::Cancelled))
+            .is_some_and(|action| matches!(action, SttInputAction::Cancelled))
     }
 }
 

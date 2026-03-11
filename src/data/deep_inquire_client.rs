@@ -375,8 +375,6 @@ fn apply_response_to_content(response: DeepInquireResponse, content: &mut Messag
                 .collect();
 
             existing_stage.citations.extend(new_citations);
-
-            return;
         });
     }
 }
@@ -394,8 +392,8 @@ fn create_or_update_stage(
         .unwrap_or_default();
 
     // Find the existing stage by matching the enum variant
-    if let Some(mut existing_stage) = data.stages.iter_mut().find(|s| s.stage_type == stage_type) {
-        update_fn(&mut existing_stage);
+    if let Some(existing_stage) = data.stages.iter_mut().find(|s| s.stage_type == stage_type) {
+        update_fn(existing_stage);
     } else {
         let mut new_stage = Stage {
             id: stage_id,
@@ -448,13 +446,9 @@ impl CustomContent for DeepInquireCustomContent {
         previous_widget: WidgetRef,
         content: &MessageContent,
     ) -> Option<WidgetRef> {
-        let Some(data) = content.data.as_deref() else {
-            return None;
-        };
+        let data = content.data.as_deref()?;
 
-        let Ok(_) = serde_json::from_str::<Data>(data) else {
-            return None;
-        };
+        serde_json::from_str::<Data>(data).ok()?;
 
         let widget = if previous_widget.as_deep_inquire_content().borrow().is_some() {
             previous_widget

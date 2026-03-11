@@ -161,7 +161,7 @@ impl Widget for Sorting {
 
 impl WidgetMatchEvent for Sorting {
     fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, _scope: &mut Scope) {
-        if let Some(item_selected) = self.drop_down(ids!(options)).selected(&actions) {
+        if let Some(item_selected) = self.drop_down(ids!(options)).selected(actions) {
             // TODO Check if we can use liveids instead of item index
             let criteria = match item_selected {
                 0 => SortCriteria::MostDownloads,

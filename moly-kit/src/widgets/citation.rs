@@ -70,17 +70,15 @@ impl Widget for Citation {
         self.ui_runner().handle(cx, event, scope, self);
         self.deref.handle_event(cx, event, scope);
 
-        if let Hit::FingerUp(fu) = event.hits(cx, self.area()) {
-            if fu.was_tap() {
-                if let Some(url) = &self.url {
+        if let Hit::FingerUp(fu) = event.hits(cx, self.area())
+            && fu.was_tap()
+                && let Some(url) = &self.url {
                     cx.widget_action(
                         self.widget_uid(),
                         &scope.path,
                         CitationAction::Open(url.clone()),
                     );
                 }
-            }
-        }
     }
 }
 

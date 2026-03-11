@@ -187,7 +187,7 @@ impl Widget for MyModelsScreen {
             .downloads
             .downloaded_files;
 
-        let summary = generate_models_summary(&downloaded_files);
+        let summary = generate_models_summary(downloaded_files);
         let models_summary_label = self.view.label(ids!(header.models_summary));
         models_summary_label.set_text(cx, &summary);
 
@@ -270,7 +270,7 @@ pub enum MyModelsSearchAction {
     None,
 }
 
-fn generate_models_summary(downloaded_files: &Vec<DownloadedFile>) -> String {
+fn generate_models_summary(downloaded_files: &[DownloadedFile]) -> String {
     let total_diskspace_mb = total_files_disk_space(downloaded_files);
     let disk_space_label = if total_diskspace_mb >= 1024.0 {
         format!("{:.2} GB Diskspace", total_diskspace_mb / 1024.0)
@@ -292,7 +292,7 @@ fn generate_models_summary(downloaded_files: &Vec<DownloadedFile>) -> String {
     )
 }
 
-fn total_files_disk_space(files: &Vec<DownloadedFile>) -> f64 {
+fn total_files_disk_space(files: &[DownloadedFile]) -> f64 {
     files.iter().fold(0., |acc, file| {
         let file_size_bytes = file.file.size.parse::<f64>();
         match file_size_bytes {

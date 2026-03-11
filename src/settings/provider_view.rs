@@ -520,8 +520,8 @@ impl Widget for ProviderView {
         let mut show_others_button = false;
 
         // If provider supports recommendations, handle the "Unknown/Others" visibility
-        if provider_has_recommended {
-            if !self.showing_others {
+        if provider_has_recommended
+            && !self.showing_others {
                 // If we have items in "others" (that matched the filter), we show the button
                 if !others.is_empty() {
                     show_others_button = true;
@@ -529,7 +529,6 @@ impl Widget for ProviderView {
                     others.clear();
                 }
             }
-        }
 
         enum DisplayItem {
             Header(String),
@@ -602,7 +601,7 @@ impl Widget for ProviderView {
                 for (idx, display_item) in display_items.iter().enumerate() {
                     match display_item {
                         DisplayItem::Header(text) => {
-                            let item_id = LiveId::from_str(&text);
+                            let item_id = LiveId::from_str(text);
                             if let Some(item) = list.item(cx, item_id, live_id!(header_entry)) {
                                 item.label(ids!(label)).set_text(cx, text);
                                 item.draw_all(cx, scope);
@@ -616,7 +615,7 @@ impl Widget for ProviderView {
                                 item.view(ids!(separator)).set_visible(cx, show_separator);
 
                                 item.label(ids!(model_name))
-                                    .set_text(cx, &bot.human_readable_name());
+                                    .set_text(cx, bot.human_readable_name());
                                 item.check_box(ids!(enabled_switch))
                                     .set_active(cx, bot.enabled && self.provider.enabled);
 
@@ -637,7 +636,7 @@ impl Widget for ProviderView {
 impl ProviderView {
     fn update_connection_status(&mut self, cx: &mut Cx) {
         let connection_status_label = self.label(ids!(connection_status));
-        connection_status_label.set_text(cx, &self.provider.connection_status.to_human_readable());
+        connection_status_label.set_text(cx, self.provider.connection_status.to_human_readable());
         let text_color = match &self.provider.connection_status {
             ProviderConnectionStatus::Connected => {
                 // green
@@ -695,35 +694,31 @@ impl WidgetMatchEvent for ProviderView {
         }
 
         for action in actions {
-            if let Some(action) = action.downcast_ref::<ModelEntryAction>() {
-                match action {
-                    ModelEntryAction::ModelEnabledChanged(model_name, model_id, enabled) => {
-                        // Update the model status in the preferences
-                        store.preferences.update_model_status(
-                            &self.provider.id,
-                            model_name,
-                            *enabled,
-                        );
+            if let Some(action) = action.downcast_ref::<ModelEntryAction>()
+                && let ModelEntryAction::ModelEnabledChanged(model_name, model_id, enabled) = action {
+                    // Update the model status in the preferences
+                    store.preferences.update_model_status(
+                        &self.provider.id,
+                        model_name,
+                        *enabled,
+                    );
 
-                        // Update the model status in the store
-                        if let Some(model) =
-                            store.chats.available_bots.get_mut(&BotId::new(model_id))
-                        {
-                            model.enabled = *enabled;
-                        } else {
-                            ::log::warn!(
-                                "Toggling model status: Bot with id {} and name {} not found in available_bots",
-                                model_id,
-                                model_name
-                            );
-                        }
-                        // Reload bot context to reflect the enabled status change
-                        store.reload_bot_context();
-                        self.redraw(cx);
+                    // Update the model status in the store
+                    if let Some(model) =
+                        store.chats.available_bots.get_mut(&BotId::new(model_id))
+                    {
+                        model.enabled = *enabled;
+                    } else {
+                        ::log::warn!(
+                            "Toggling model status: Bot with id {} and name {} not found in available_bots",
+                            model_id,
+                            model_name
+                        );
                     }
-                    _ => {}
+                    // Reload bot context to reflect the enabled status change
+                    store.reload_bot_context();
+                    self.redraw(cx);
                 }
-            }
         }
 
         // Handle save
@@ -821,7 +816,7 @@ impl ProviderViewRef {
             // Update the text inputs
             let api_key_input = inner.text_input(ids!(api_key));
             if let Some(api_key) = &provider.api_key {
-                api_key_input.set_text(cx, &api_key);
+                api_key_input.set_text(cx, api_key);
             } else {
                 api_key_input.set_text(cx, "");
             }
@@ -830,7 +825,7 @@ impl ProviderViewRef {
             inner.label(ids!(name)).set_text(cx, &provider.name);
             inner
                 .label(ids!(provider_type))
-                .set_text(cx, &provider.provider_type.to_human_readable());
+                .set_text(cx, provider.provider_type.to_human_readable());
             inner
                 .check_box(ids!(provider_enabled_switch))
                 .set_active(cx, provider.enabled);
@@ -844,7 +839,7 @@ impl ProviderViewRef {
                 if let Some(system_prompt) = &provider.system_prompt {
                     inner
                         .text_input(ids!(system_prompt))
-                        .set_text(cx, &system_prompt);
+                        .set_text(cx, system_prompt);
                 } else {
                     inner.text_input(ids!(system_prompt)).set_text(cx, "");
                 }
