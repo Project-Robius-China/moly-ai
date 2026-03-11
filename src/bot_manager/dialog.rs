@@ -76,7 +76,8 @@ fn try_command(
         "/newbot" => {
             *state = DialogState::AwaitingBotName;
             Some(
-                "好的，让我们来创建一个新 Bot。\n\n请给它起个名字：".to_string(),
+                "Alright, a new bot. Please choose a name for your bot:"
+                    .to_string(),
             )
         }
         "/mybots" => {
@@ -85,12 +86,16 @@ fn try_command(
         }
         "/cancel" => {
             *state = DialogState::Idle;
-            Some("操作已取消。发送 /start 查看可用命令。".to_string())
+            Some(
+                "Operation cancelled. Send /start to see available commands."
+                    .to_string(),
+            )
         }
         _ => {
             *state = DialogState::Idle;
             Some(format!(
-                "未知命令: {cmd}\n\n发送 /start 查看可用命令列表。"
+                "Unknown command: {cmd}\n\n\
+                 Send /start to see the list of available commands."
             ))
         }
     }
@@ -98,24 +103,28 @@ fn try_command(
 
 fn cmd_start() -> String {
     "\
-欢迎使用 BotFather！我可以帮你创建和管理 Bot。
+Welcome to BotFather! I can help you create and manage bots.
 
-可用命令：
-/newbot — 创建一个新 Bot
-/mybots — 管理已有的 Bot
-/cancel — 取消当前操作
-/help — 显示帮助信息"
+Available commands:
+/newbot — Create a new bot
+/mybots — Manage your bots
+/cancel — Cancel current operation
+/help — Show help"
         .to_string()
 }
 
 fn cmd_mybots(store: &BotStore) -> String {
     match store.list_bots() {
         Ok(bots) if bots.is_empty() => {
-            "你还没有创建任何 Bot。\n\n使用 /newbot 创建你的第一个 Bot！"
+            "You haven't created any bots yet.\n\n\
+             Use /newbot to create your first bot!"
                 .to_string()
         }
         Ok(bots) => {
-            let mut msg = format!("你的 Bot（共 {} 个）：\n\n", bots.len());
+            let mut msg = format!(
+                "Your bots ({} total):\n\n",
+                bots.len()
+            );
             for (i, bot) in bots.iter().enumerate() {
                 msg.push_str(&format!(
                     "{}. {} (@{})\n",
@@ -125,29 +134,31 @@ fn cmd_mybots(store: &BotStore) -> String {
                 ));
             }
             msg.push_str(
-                "\n输入序号或用户名来管理对应的 Bot：",
+                "\nEnter a number or username to manage a bot.",
             );
             msg
         }
-        Err(e) => format!("获取 Bot 列表失败: {e}"),
+        Err(e) => format!("Failed to list bots: {e}"),
     }
 }
 
 fn handle_unknown(input: &str) -> String {
     format!(
-        "不理解 \"{input}\"。\n\n发送 /start 查看可用命令列表。"
+        "I don't understand \"{input}\".\n\n\
+         Send /start to see available commands."
     )
 }
 
 fn handle_awaiting_bot_name(state: &mut DialogState, name: &str) -> String {
     if name.is_empty() {
-        return "名称不能为空，请重新输入：".to_string();
+        return "Name cannot be empty. Please try again:".to_string();
     }
     *state = DialogState::AwaitingUsername {
         name: name.to_string(),
     };
-    "好的。现在请给它起一个用户名（必须以 bot 结尾，\
-     仅允许小写字母、数字和下划线，3-32 个字符）："
+    "Good. Now please choose a username for your bot.\n\n\
+     It must end with 'bot' or '_bot' \
+     (only lowercase letters, digits, and underscores, 3-32 chars):"
         .to_string()
 }
 
@@ -159,7 +170,7 @@ fn handle_awaiting_username(
     server_port: u16,
 ) -> String {
     if let Err(reason) = validate_username(username) {
-        return format!("{reason}\n\n请重新输入用户名：");
+        return format!("{reason}\n\nPlease enter a different username:");
     }
 
     match store.create_bot(name, username) {
@@ -171,11 +182,12 @@ fn handle_awaiting_username(
             let msg = e.to_string();
             if msg.contains("already taken") {
                 format!(
-                    "用户名 @{username} 已被使用，请换一个用户名："
+                    "The username @{username} is already taken. \
+                     Please choose another:"
                 )
             } else {
                 *state = DialogState::Idle;
-                format!("创建 Bot 失败: {e}")
+                format!("Failed to create bot: {e}")
             }
         }
     }
@@ -186,19 +198,23 @@ fn handle_awaiting_username(
 fn validate_username(username: &str) -> Result<(), String> {
     let len = username.len();
     if !(3..=32).contains(&len) {
-        return Err("用户名长度必须在 3 到 32 个字符之间。".to_string());
+        return Err(
+            "Username must be between 3 and 32 characters.".to_string(),
+        );
     }
     if !username
         .chars()
         .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
     {
         return Err(
-            "用户名仅允许小写字母、数字和下划线。".to_string(),
+            "Username can only contain lowercase letters, digits, \
+             and underscores."
+                .to_string(),
         );
     }
     if !username.ends_with("bot") && !username.ends_with("_bot") {
         return Err(
-            "用户名必须以 \"bot\" 或 \"_bot\" 结尾。".to_string(),
+            "Username must end with 'bot' or '_bot'.".to_string(),
         );
     }
     Ok(())
@@ -206,13 +222,15 @@ fn validate_username(username: &str) -> Result<(), String> {
 
 fn format_bot_created(bot: &BotInfo, server_port: u16) -> String {
     format!(
-        "已创建！你的新 Bot「{}」(@{}) 已就绪。\n\n\
-         Token: `{}`\n\n\
-         在 crew-rs 中使用此 Bot：\n\
-         1. 设置 API URL 为: http://localhost:{server_port}\n\
-         2. 将上面的 Token 填入 crew-rs 配置\n\n\
-         使用 /mybots 管理你的 Bot。",
-        bot.name, bot.username, bot.token
+        "Done! Your new bot \"{name}\" (@{username}) is ready.\n\n\
+         Token: `{token}`\n\n\
+         To connect with crew-rs:\n\
+         1. Set API URL to: http://localhost:{server_port}\n\
+         2. Paste the token above into your crew-rs config\n\n\
+         Use /mybots to manage your bots.",
+        name = bot.name,
+        username = bot.username,
+        token = bot.token,
     )
 }
 
@@ -229,22 +247,23 @@ fn handle_managing_bot_input(
             *state = DialogState::AwaitingNewName {
                 token: token.to_string(),
             };
-            "请输入新名称：".to_string()
+            "Please enter a new name:".to_string()
         }
         "3" => revoke_token(state, token, store, server_port),
         "4" => {
             *state = DialogState::ConfirmingDelete {
                 token: token.to_string(),
             };
-            "确定要删除这个 Bot 吗？此操作不可恢复。\n\n\
-             输入 \"确认删除\" 来确认，或 /cancel 取消。"
+            "Are you sure you want to delete this bot? \
+             This cannot be undone.\n\n\
+             Type \"confirm delete\" to confirm, or /cancel to cancel."
                 .to_string()
         }
         "5" => {
             *state = DialogState::Idle;
-            "已退出管理菜单。".to_string()
+            "Exited management menu.".to_string()
         }
-        _ => "请输入选项序号（1-5）：".to_string(),
+        _ => "Please enter an option number (1-5):".to_string(),
     }
 }
 
@@ -258,17 +277,19 @@ fn show_token(
         Ok(Some(bot)) => {
             *state = DialogState::Idle;
             format!(
-                "Bot「{}」(@{}) 的 Token：\n\n\
-                 `{}`\n\n\
-                 在 crew-rs 中使用：\n\
-                 1. 设置 API URL 为: http://localhost:{server_port}\n\
-                 2. 将上面的 Token 填入 crew-rs 配置",
-                bot.name, bot.username, bot.token
+                "Bot \"{name}\" (@{username}) token:\n\n\
+                 `{token}`\n\n\
+                 To use with crew-rs:\n\
+                 1. Set API URL to: http://localhost:{server_port}\n\
+                 2. Paste the token above into your crew-rs config",
+                name = bot.name,
+                username = bot.username,
+                token = bot.token,
             )
         }
         _ => {
             *state = DialogState::Idle;
-            "Bot 不存在或已被删除。".to_string()
+            "Bot not found or has been deleted.".to_string()
         }
     }
 }
@@ -281,18 +302,17 @@ fn revoke_token(
 ) -> String {
     match store.revoke_token(old_token) {
         Ok(new_token) => {
-            // Update state to reference the new token
             *state = DialogState::Idle;
             format!(
-                "Token 已重置。新 Token：\n\n\
+                "Token has been revoked. New token:\n\n\
                  `{new_token}`\n\n\
-                 请更新 crew-rs 配置中的 Token。\n\
+                 Please update the token in your crew-rs config.\n\
                  API URL: http://localhost:{server_port}"
             )
         }
         Err(e) => {
             *state = DialogState::Idle;
-            format!("重置 Token 失败: {e}")
+            format!("Failed to revoke token: {e}")
         }
     }
 }
@@ -304,7 +324,7 @@ fn handle_awaiting_new_name(
     store: &BotStore,
 ) -> String {
     if new_name.is_empty() {
-        return "名称不能为空，请重新输入：".to_string();
+        return "Name cannot be empty. Please try again:".to_string();
     }
     match store.update_bot(
         token,
@@ -316,13 +336,13 @@ fn handle_awaiting_new_name(
         Ok(bot) => {
             *state = DialogState::Idle;
             format!(
-                "名称已更新为「{}」(@{})。",
+                "Name updated to \"{}\" (@{}).",
                 bot.name, bot.username
             )
         }
         Err(e) => {
             *state = DialogState::Idle;
-            format!("更新名称失败: {e}")
+            format!("Failed to update name: {e}")
         }
     }
 }
@@ -333,20 +353,20 @@ fn handle_confirming_delete(
     input: &str,
     store: &BotStore,
 ) -> String {
-    if input == "确认删除" {
+    if input == "confirm delete" {
         match store.delete_bot(token) {
             Ok(()) => {
                 *state = DialogState::Idle;
-                "Bot 已删除。".to_string()
+                "Bot has been deleted.".to_string()
             }
             Err(e) => {
                 *state = DialogState::Idle;
-                format!("删除失败: {e}")
+                format!("Failed to delete bot: {e}")
             }
         }
     } else {
         *state = DialogState::Idle;
-        "已取消删除。".to_string()
+        "Deletion cancelled.".to_string()
     }
 }
 
@@ -360,12 +380,12 @@ pub fn resolve_bot_selection(
 ) -> String {
     let bots = match store.list_bots() {
         Ok(b) => b,
-        Err(e) => return format!("获取 Bot 列表失败: {e}"),
+        Err(e) => return format!("Failed to list bots: {e}"),
     };
 
     if bots.is_empty() {
         *state = DialogState::Idle;
-        return "没有可管理的 Bot。使用 /newbot 创建一个。".to_string();
+        return "No bots to manage. Use /newbot to create one.".to_string();
     }
 
     // Try to match by index (1-based)
@@ -384,7 +404,8 @@ pub fn resolve_bot_selection(
     }
 
     format!(
-        "未找到匹配的 Bot。请输入正确的序号（1-{}）或用户名：",
+        "No matching bot found. \
+         Please enter a valid number (1-{}) or username:",
         bots.len()
     )
 }
@@ -394,13 +415,13 @@ fn enter_management_menu(state: &mut DialogState, bot: &BotInfo) -> String {
         token: bot.token.clone(),
     };
     format!(
-        "管理 Bot「{}」(@{})：\n\n\
-         1. 查看 Token\n\
-         2. 编辑名称\n\
-         3. 重置 Token\n\
-         4. 删除 Bot\n\
-         5. 返回\n\n\
-         请输入选项序号：",
+        "Managing bot \"{}\" (@{}):\n\n\
+         1. View Token\n\
+         2. Edit Name\n\
+         3. Revoke Token\n\
+         4. Delete Bot\n\
+         5. Return\n\n\
+         Enter an option number:",
         bot.name, bot.username
     )
 }
@@ -423,7 +444,7 @@ mod tests {
         let store = test_store();
         let mut state = DialogState::default();
         let response = process_input(&mut state, "/start", &store, 8488);
-        assert!(response.contains("欢迎"));
+        assert!(response.contains("Welcome"));
         assert!(response.contains("/newbot"));
         assert!(response.contains("/mybots"));
     }
@@ -434,19 +455,19 @@ mod tests {
         let mut state = DialogState::default();
 
         let r = process_input(&mut state, "/newbot", &store, 8488);
-        assert!(r.contains("名字"));
+        assert!(r.contains("name"));
 
-        let r = process_input(&mut state, "天气助手", &store, 8488);
-        assert!(r.contains("用户名"));
+        let r = process_input(&mut state, "Weather Bot", &store, 8488);
+        assert!(r.contains("username"));
 
         let r = process_input(&mut state, "weather_bot", &store, 8488);
-        assert!(r.contains("已创建"));
+        assert!(r.contains("Done"));
         assert!(r.contains("Token"));
 
         // Verify bot exists in store
         let bots = store.list_bots().unwrap();
         assert_eq!(bots.len(), 1);
-        assert_eq!(bots[0].name, "天气助手");
+        assert_eq!(bots[0].name, "Weather Bot");
         assert_eq!(bots[0].username, "weather_bot");
     }
 
@@ -463,7 +484,7 @@ mod tests {
             &store,
             8488,
         );
-        assert!(r.contains("小写字母"));
+        assert!(r.contains("lowercase"));
         assert!(matches!(
             state,
             DialogState::AwaitingUsername { .. }
@@ -479,7 +500,7 @@ mod tests {
             name: "Second".into(),
         };
         let r = process_input(&mut state, "weather_bot", &store, 8488);
-        assert!(r.contains("已被使用"));
+        assert!(r.contains("already taken"));
         assert!(matches!(
             state,
             DialogState::AwaitingUsername { .. }
@@ -489,14 +510,14 @@ mod tests {
     #[test]
     fn test_botfather_mybots() {
         let store = test_store();
-        store.create_bot("天气助手", "weather_bot").unwrap();
-        store.create_bot("代码助手", "code_bot").unwrap();
+        store.create_bot("Weather Bot", "weather_bot").unwrap();
+        store.create_bot("Code Bot", "code_bot").unwrap();
 
         let mut state = DialogState::default();
         let r = process_input(&mut state, "/mybots", &store, 8488);
         assert!(r.contains("2"));
-        assert!(r.contains("天气助手"));
-        assert!(r.contains("代码助手"));
+        assert!(r.contains("Weather Bot"));
+        assert!(r.contains("Code Bot"));
     }
 
     #[test]
@@ -504,14 +525,14 @@ mod tests {
         let store = test_store();
         let mut state = DialogState::default();
         let r = process_input(&mut state, "/mybots", &store, 8488);
-        assert!(r.contains("没有创建任何 Bot"));
+        assert!(r.contains("haven't created any bots"));
         assert!(r.contains("/newbot"));
     }
 
     #[test]
     fn test_botfather_token_command() {
         let store = test_store();
-        let bot = store.create_bot("天气助手", "weather_bot").unwrap();
+        let bot = store.create_bot("Weather Bot", "weather_bot").unwrap();
 
         let mut state = DialogState::ManagingBot {
             token: bot.token.clone(),
@@ -524,14 +545,14 @@ mod tests {
     #[test]
     fn test_botfather_revoke_token() {
         let store = test_store();
-        let bot = store.create_bot("天气助手", "weather_bot").unwrap();
+        let bot = store.create_bot("Weather Bot", "weather_bot").unwrap();
         let old_token = bot.token.clone();
 
         let mut state = DialogState::ManagingBot {
             token: old_token.clone(),
         };
         let r = process_input(&mut state, "3", &store, 8488);
-        assert!(r.contains("已重置"));
+        assert!(r.contains("revoked"));
         assert!(!r.contains(&old_token));
 
         // Old token should no longer work
@@ -541,34 +562,39 @@ mod tests {
     #[test]
     fn test_botfather_setname() {
         let store = test_store();
-        let bot = store.create_bot("天气助手", "weather_bot").unwrap();
+        let bot = store.create_bot("Weather Bot", "weather_bot").unwrap();
 
         let mut state = DialogState::ManagingBot {
             token: bot.token.clone(),
         };
-        // Select "编辑名称"
+        // Select "Edit Name"
         let r = process_input(&mut state, "2", &store, 8488);
-        assert!(r.contains("新名称"));
+        assert!(r.contains("new name"));
 
-        let r = process_input(&mut state, "天气预报大师", &store, 8488);
-        assert!(r.contains("已更新"));
-        assert!(r.contains("天气预报大师"));
+        let r = process_input(
+            &mut state,
+            "Weather Master",
+            &store,
+            8488,
+        );
+        assert!(r.contains("updated"));
+        assert!(r.contains("Weather Master"));
     }
 
     #[test]
     fn test_botfather_deletebot_confirms() {
         let store = test_store();
-        let bot = store.create_bot("天气助手", "weather_bot").unwrap();
+        let bot = store.create_bot("Weather Bot", "weather_bot").unwrap();
 
         let mut state = DialogState::ManagingBot {
             token: bot.token.clone(),
         };
-        // Select "删除 Bot"
+        // Select "Delete Bot"
         let r = process_input(&mut state, "4", &store, 8488);
-        assert!(r.contains("确定要删除"));
+        assert!(r.contains("Are you sure"));
 
-        let r = process_input(&mut state, "确认删除", &store, 8488);
-        assert!(r.contains("已删除"));
+        let r = process_input(&mut state, "confirm delete", &store, 8488);
+        assert!(r.contains("deleted"));
 
         // Verify bot is gone
         assert!(store.list_bots().unwrap().is_empty());
@@ -578,7 +604,7 @@ mod tests {
     fn test_botfather_unknown_command() {
         let store = test_store();
         let mut state = DialogState::default();
-        let r = process_input(&mut state, "随便说点什么", &store, 8488);
+        let r = process_input(&mut state, "some random text", &store, 8488);
         assert!(r.contains("/start"));
     }
 
