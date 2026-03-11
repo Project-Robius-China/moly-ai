@@ -8,16 +8,13 @@ live_design! {
 
     BOTFATHER_GREEN = #4CAF50
     BOTFATHER_CARD_BG = #f5f5f5
-    BOTFATHER_CARD_BORDER = #e0e0e0
 
     StatCard = <RoundedView> {
         width: Fill, height: Fit
         padding: 16
         draw_bg: {
             color: (BOTFATHER_CARD_BG)
-            border_width: 1.0
-            border_color: (BOTFATHER_CARD_BORDER)
-            radius: 10.0
+            border_radius: 10.0
         }
         flow: Down
         align: {x: 0.5}
@@ -42,9 +39,7 @@ live_design! {
         margin: {top: 12}
         draw_bg: {
             color: (BOTFATHER_CARD_BG)
-            border_width: 1.0
-            border_color: (BOTFATHER_CARD_BORDER)
-            radius: 10.0
+            border_radius: 10.0
         }
         flow: Down
         panel_title = <Label> {
@@ -80,7 +75,7 @@ live_design! {
                 width: 8, height: 8
                 draw_bg: {
                     color: (BOTFATHER_GREEN)
-                    radius: 4.0
+                    border_radius: 4.0
                 }
             }
             status_label = <Label> {
