@@ -415,7 +415,7 @@ impl Widget for ModelCard {
 impl WidgetMatchEvent for ModelCard {
     fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, _scope: &mut Scope) {
         if self.link_label(ids!(view_all_button.link)).clicked(actions) {
-            self.moly_modal(ids!(modal)).open(cx);
+            self.moly_modal(ids!(modal)).open_as_dialog(cx);
             self.redraw(cx);
         }
 

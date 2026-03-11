@@ -353,7 +353,7 @@ impl ModelSelector {
             );
         }
 
-        modal.open(cx);
+        modal.open_as_dialog(cx);
     }
 
     fn close_modal(&mut self, cx: &mut Cx) {

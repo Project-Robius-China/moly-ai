@@ -39,8 +39,11 @@ enum CrewRsEvent {
     /// Final summary with the complete assembled content.
     #[serde(rename = "done")]
     Done {
+        #[allow(dead_code)]
         content: String,
+        #[allow(dead_code)]
         input_tokens: u64,
+        #[allow(dead_code)]
         output_tokens: u64,
     },
 }
