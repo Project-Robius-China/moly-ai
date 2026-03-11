@@ -14,6 +14,7 @@ mod image_view;
 mod message_loading;
 mod message_thinking_block;
 mod model_selector_item;
+pub mod quick_reply_group;
 mod slot;
 mod standard_message_content;
 mod theme_moly_kit_light;
@@ -55,6 +56,7 @@ pub fn live_design(cx: &mut makepad_widgets::Cx) {
     message_loading::live_design(cx);
     avatar::live_design(cx);
     slot::live_design(cx);
+    quick_reply_group::live_design(cx);
     standard_message_content::live_design(cx);
     chat_line::live_design(cx);
     messages::live_design(cx);

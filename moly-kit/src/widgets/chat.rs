@@ -395,6 +395,18 @@ impl Chat {
                         ..Default::default()
                     }));
                 }
+                MessagesAction::QuickReply(action_text) => {
+                    let mut lock = chat_controller.lock().unwrap();
+                    lock.dispatch_mutation(VecMutation::Push(Message {
+                        from: EntityId::User,
+                        content: MessageContent {
+                            text: action_text,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }));
+                    lock.dispatch_task(ChatTask::Send);
+                }
                 MessagesAction::None => {}
             }
         }
