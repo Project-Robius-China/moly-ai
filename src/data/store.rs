@@ -16,6 +16,8 @@ use chrono::{DateTime, Utc};
 use makepad_widgets::{Action, ActionDefaultRef, DefaultNone};
 use moly_kit::aitk::utils::asynchronous::spawn;
 use moly_kit::prelude::*;
+#[cfg(not(target_arch = "wasm32"))]
+use std::sync::Arc;
 
 use super::providers::{Provider, ProviderConnectionStatus};
 use moly_protocol::data::{Author, File, FileId, Model, ModelId, PendingDownload};
@@ -77,6 +79,13 @@ pub struct Store {
     pub provider_syncing_status: ProviderSyncingStatus,
 
     pub provider_icons: Vec<LiveDependency>,
+
+    /// Shared state of the Telegram Bot API server (native only).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub bot_server_state: Option<Arc<moly_kit::aitk::telegram_server::ServerState>>,
+    /// Handle to the running server; Drop triggers shutdown.
+    #[cfg(not(target_arch = "wasm32"))]
+    _bot_server_handle: Option<moly_kit::aitk::telegram_server::ServerHandle>,
 }
 
 const MOLY_SERVER_VERSION_EXTENSION: &str = "/api/v1";
@@ -95,6 +104,82 @@ impl Store {
 
             let chats = Chats::load(moly_client.clone()).await;
 
+            // Start Telegram Bot API server (native only).
+            #[cfg(not(target_arch = "wasm32"))]
+            let (bot_server_state, bot_server_handle) = {
+                use moly_kit::aitk::telegram_server::{
+                    OutboundEvent, ServerConfig, TelegramBotApiServer,
+                };
+
+                let data_dir = {
+                    use directories::ProjectDirs;
+                    let dirs = ProjectDirs::from("com", "moly-ai", "moly")
+                        .expect("Failed to determine app data directory");
+                    dirs.data_dir().join("bot_server")
+                };
+                let _ = std::fs::create_dir_all(&data_dir);
+
+                let config = ServerConfig {
+                    port: preferences.bot_server_port,
+                    db_path: data_dir
+                        .join("moly_bots.db")
+                        .to_string_lossy()
+                        .into_owned(),
+                    media_dir: data_dir
+                        .join("media")
+                        .to_string_lossy()
+                        .into_owned(),
+                };
+
+                match TelegramBotApiServer::start(config).await {
+                    Ok((handle, state, mut outbound_rx)) => {
+                        ::log::info!(
+                            "Telegram Bot API server listening on http://{}",
+                            handle.addr,
+                        );
+
+                        spawn(async move {
+                            use futures::StreamExt as _;
+                            while let Some(event) = outbound_rx.next().await {
+                                match &event {
+                                    OutboundEvent::SendMessage { chat_id, .. } => {
+                                        ::log::info!(
+                                            "[bot-outbound] SendMessage to chat {chat_id}",
+                                        );
+                                    }
+                                    OutboundEvent::EditMessage {
+                                        chat_id,
+                                        message_id,
+                                        ..
+                                    } => {
+                                        ::log::info!(
+                                            "[bot-outbound] EditMessage chat={chat_id} \
+                                             msg={message_id}",
+                                        );
+                                    }
+                                    OutboundEvent::DeleteMessage {
+                                        chat_id,
+                                        message_id,
+                                        ..
+                                    } => {
+                                        ::log::info!(
+                                            "[bot-outbound] DeleteMessage chat={chat_id} \
+                                             msg={message_id}",
+                                        );
+                                    }
+                                }
+                            }
+                        });
+
+                        (Some(state), Some(handle))
+                    }
+                    Err(e) => {
+                        ::log::error!("Failed to start Telegram Bot API server: {e}");
+                        (None, None)
+                    }
+                }
+            };
+
             let mut store = Self {
                 search: Search::new(moly_client.clone()),
                 downloads: Downloads::new(moly_client.clone()),
@@ -104,6 +189,10 @@ impl Store {
                 bot_context: None,
                 provider_syncing_status: ProviderSyncingStatus::NotSyncing,
                 provider_icons: vec![],
+                #[cfg(not(target_arch = "wasm32"))]
+                bot_server_state,
+                #[cfg(not(target_arch = "wasm32"))]
+                _bot_server_handle: bot_server_handle,
             };
 
             store.init_current_chat();

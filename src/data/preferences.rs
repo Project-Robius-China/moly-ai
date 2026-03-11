@@ -24,6 +24,9 @@ pub struct Preferences {
     pub mcp_servers_config: McpServersConfig,
     #[serde(default)]
     stt_config: Versioned<SttConfig>,
+    /// Port for the Telegram Bot API server (native only).
+    #[serde(default = "default_bot_server_port")]
+    pub bot_server_port: u16,
 }
 
 impl Default for Preferences {
@@ -34,6 +37,7 @@ impl Default for Preferences {
             providers_preferences: vec![],
             mcp_servers_config: McpServersConfig::new(),
             stt_config: Versioned::default(),
+            bot_server_port: default_bot_server_port(),
         }
     }
 }
@@ -252,6 +256,10 @@ pub struct ProviderPreferences {
 
 fn default_tools_enabled() -> bool {
     true
+}
+
+fn default_bot_server_port() -> u16 {
+    8488
 }
 
 impl ProviderPreferences {
