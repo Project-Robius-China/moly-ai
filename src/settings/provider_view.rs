@@ -1,6 +1,9 @@
 use makepad_widgets::*;
 use moly_kit::prelude::*;
 
+#[cfg(not(target_arch = "wasm32"))]
+use crate::settings::botfather_view::BotFatherViewWidgetExt;
+
 use crate::data::{
     providers::{Provider, ProviderBot, ProviderConnectionStatus, ProviderType},
     store::Store,
@@ -13,6 +16,9 @@ live_design! {
 
     use crate::shared::widgets::*;
     use crate::shared::styles::*;
+
+    #[cfg(not(target_arch = "wasm32"))]
+    use crate::settings::botfather_view::*;
 
     REFRESH_ICON = dep("crate://self/resources/images/refresh_icon.png")
     // Tiny space to separate tabular text.
@@ -209,6 +215,13 @@ live_design! {
                     color: #D9D9D9
                 }
             }
+
+            #[cfg(not(target_arch = "wasm32"))]
+            botfather_content = <BotFatherView> {}
+
+            api_fields_group = <View> {
+                width: Fill, height: Fit
+                flow: Down
 
             // HOST
             <FormGroup> {
@@ -457,6 +470,8 @@ Moly automatically appends useful context to your prompt, like the time of day."
                 }
             }
 
+            } // api_fields_group
+
             // Bottom padding in the scroll view doesn't currently work.
             <View> { height: (MD_GAP) }
         }
@@ -487,6 +502,21 @@ impl Widget for ProviderView {
 
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
         let store = scope.data.get_mut::<Store>().unwrap();
+
+        // Populate BotFather stats if this is a BotFather provider
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.provider.provider_type == ProviderType::BotFather {
+            let bot_count = store
+                .bot_server_state
+                .as_ref()
+                .and_then(|s| s.store.list_bots().ok())
+                .map(|b| b.len())
+                .unwrap_or(0);
+            let port = store.preferences.bot_server_port;
+            self.bot_father_view(ids!(botfather_content))
+                .set_data(cx, bot_count, port);
+        }
+
         let mut models = store.chats.get_provider_models(&self.provider.id);
 
         let has_models = !models.is_empty();
@@ -832,6 +862,19 @@ impl ProviderViewRef {
             inner
                 .check_box(ids!(provider_tools_switch))
                 .set_active(cx, provider.tools_enabled);
+
+            // Show/hide BotFather custom view vs API fields
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let is_botfather =
+                    provider.provider_type == ProviderType::BotFather;
+                inner
+                    .view(ids!(api_fields_group))
+                    .set_visible(cx, !is_botfather);
+                inner
+                    .view(ids!(botfather_content))
+                    .set_visible(cx, is_botfather);
+            }
 
             // Show/hide system prompt field for Realtime providers
             if provider.provider_type == ProviderType::OpenAiRealtime {
