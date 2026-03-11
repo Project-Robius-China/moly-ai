@@ -491,6 +491,8 @@ impl WidgetMatchEvent for AddProviderModal {
                     system_prompt: None,
                     tools_enabled: false,
                 },
+                // BotFather is auto-registered, not manually added.
+                ProviderType::BotFather => return,
             };
 
             store.insert_or_update_provider(&provider);

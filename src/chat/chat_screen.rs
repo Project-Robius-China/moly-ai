@@ -197,6 +197,10 @@ impl ChatScreen {
                         &providers,
                         store,
                     ),
+                    #[cfg(not(target_arch = "wasm32"))]
+                    ProviderType::BotFather => create_botfather_client(store),
+                    #[cfg(target_arch = "wasm32")]
+                    ProviderType::BotFather => None,
                 };
 
                 if let Some(client) = client {
@@ -255,7 +259,8 @@ fn has_valid_credentials(provider: &Provider) -> bool {
         | ProviderType::OpenAiImage
         | ProviderType::DeepInquire
         | ProviderType::OpenClaw
-        | ProviderType::CrewRs => true,
+        | ProviderType::CrewRs
+        | ProviderType::BotFather => true,
     }
 }
 
@@ -505,4 +510,14 @@ fn create_crewrs_client(
     );
 
     Some(Box::new(map_client))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn create_botfather_client(store: &Store) -> Option<Box<dyn BotClient>> {
+    let server_state = store.bot_server_state.clone()?;
+    let client = crate::bot_manager::BotFatherClient::new(
+        server_state,
+        store.preferences.bot_server_port,
+    );
+    Some(Box::new(client))
 }

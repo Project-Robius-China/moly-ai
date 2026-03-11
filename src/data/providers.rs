@@ -177,6 +177,7 @@ pub enum ProviderType {
     MolyServer,
     OpenClaw,
     CrewRs,
+    BotFather,
 }
 
 impl ProviderType {
@@ -190,6 +191,7 @@ impl ProviderType {
             ProviderType::MolyServer => "MolyServer",
             ProviderType::OpenClaw => "OpenClaw",
             ProviderType::CrewRs => "CrewRs",
+            ProviderType::BotFather => "BotFather",
         }
     }
 
@@ -198,7 +200,12 @@ impl ProviderType {
     /// Providers like OpenClaw and CrewRs manage models internally,
     /// so the model selection UI should be hidden.
     pub fn has_model_selection(&self) -> bool {
-        !matches!(self, ProviderType::OpenClaw | ProviderType::CrewRs)
+        !matches!(
+            self,
+            ProviderType::OpenClaw
+                | ProviderType::CrewRs
+                | ProviderType::BotFather
+        )
     }
 }
 

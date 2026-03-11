@@ -141,6 +141,24 @@ pub fn fetch_models_for_provider(provider: &Provider) {
                 None,
             );
         }
+        ProviderType::BotFather => {
+            // BotFather models are registered directly, not fetched.
+            let bot_id = RouterClient::prefix(
+                &provider_id,
+                &BotId::new("botfather"),
+            );
+            Cx::post_action(ProviderFetchModelsResult::Success(
+                provider_id.clone(),
+                vec![ProviderBot {
+                    id: bot_id,
+                    name: "BotFather".to_string(),
+                    description: "创建和管理 Bot".to_string(),
+                    provider_id,
+                    enabled: true,
+                    is_recommended: false,
+                }],
+            ));
+        }
     }
 }
 
