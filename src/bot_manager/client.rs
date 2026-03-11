@@ -46,18 +46,14 @@ impl BotFatherClient {
 
 impl BotFatherClient {
     /// Returns the welcome message content with quick reply buttons.
+    ///
+    /// The text body comes from [`super::dialog::WELCOME_TEXT`] — the single
+    /// source of truth for BotFather's greeting.
     pub fn welcome_message() -> MessageContent {
         use moly_kit::aitk::protocol::{ButtonStyle, QuickReplyButton};
 
         MessageContent {
-            text: "\
-Welcome to BotFather! I can help you create and manage bots.
-
-Available commands:
-/newbot — Create a new bot
-/mybots — Manage your bots
-/help — Show help"
-                .to_string(),
+            text: super::dialog::welcome_text(),
             quick_replies: vec![
                 QuickReplyButton {
                     label: "Create a Bot".to_string(),

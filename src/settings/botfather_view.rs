@@ -1,3 +1,4 @@
+use crate::bot_manager::dialog::COMMAND_LIST;
 use makepad_widgets::*;
 
 live_design! {
@@ -130,15 +131,17 @@ live_design! {
             }
         }
 
-        // Command reference
+        // Command reference (text set at runtime from COMMAND_LIST)
         commands_panel = <InfoPanel> {
             panel_title = { text: "Available Commands" }
-            panel_content = {
-                text: "/newbot  — Create a new bot\n\
-                       /mybots  — Manage your bots\n\
-                       /start   — Show welcome message\n\
-                       /help    — Show help\n\
-                       /cancel  — Cancel current operation"
+            commands_content = <Label> {
+                margin: {top: 8}
+                width: Fill
+                draw_text: {
+                    text_style: {font_size: 10}
+                    color: #555555
+                    wrap: Word
+                }
             }
         }
 
@@ -181,7 +184,7 @@ impl Widget for BotFatherView {
 }
 
 impl BotFatherView {
-    /// Update the displayed bot count and server port.
+    /// Update the displayed bot count, server port, and command list.
     pub fn set_data(
         &mut self,
         cx: &mut Cx,
@@ -192,6 +195,8 @@ impl BotFatherView {
             .set_text(cx, &bot_count.to_string());
         self.label(ids!(api_address_value))
             .set_text(cx, &format!("localhost:{server_port}"));
+        self.label(ids!(commands_content))
+            .set_text(cx, COMMAND_LIST);
     }
 }
 
