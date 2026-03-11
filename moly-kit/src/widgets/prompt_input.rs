@@ -261,17 +261,14 @@ impl Widget for PromptInput {
 
         if self.button(ids!(attach)).clicked(event.actions()) {
             let ui = self.ui_runner();
-            Attachment::pick_multiple(move |result| match result {
-                Ok(attachments) => {
-                    ui.defer_with_redraw(move |me, _, _| {
-                        let mut list = me.attachment_list_ref();
-                        list.write().attachments.extend(attachments);
-                        list.write().on_tap(move |list, index| {
-                            list.attachments.remove(index);
-                        });
+            Attachment::pick_multiple(move |result| if let Ok(attachments) = result {
+                ui.defer_with_redraw(move |me, _, _| {
+                    let mut list = me.attachment_list_ref();
+                    list.write().attachments.extend(attachments);
+                    list.write().on_tap(move |list, index| {
+                        list.attachments.remove(index);
                     });
-                }
-                Err(_) => {}
+                });
             });
         }
     }
@@ -495,13 +492,13 @@ impl PromptInputRef {
     ///
     /// Panics if the widget reference is empty or if it's already borrowed.
     pub fn read_with<R>(&self, f: impl FnOnce(&PromptInput) -> R) -> R {
-        f(&*self.read())
+        f(&self.read())
     }
 
     /// Mutable writer to the underlying [[PromptInput]].
     ///
     /// Panics if the widget reference is empty or if it's already borrowed.
     pub fn write_with<R>(&mut self, f: impl FnOnce(&mut PromptInput) -> R) -> R {
-        f(&mut *self.write())
+        f(&mut self.write())
     }
 }

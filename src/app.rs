@@ -277,13 +277,12 @@ impl AppMain for App {
         self.ui.view(ids!(loading_view)).set_visible(cx, false);
 
         // It triggers when the timer expires.
-        if self.timer.is_event(event).is_some() {
-            if let Some(file_id) = &self.file_id {
-                let (model, file) = store.get_model_and_file_download(&file_id);
+        if self.timer.is_event(event).is_some()
+            && let Some(file_id) = &self.file_id {
+                let (model, file) = store.get_model_and_file_download(file_id);
                 store.downloads.download_file(model, file);
                 self.ui.redraw(cx);
             }
-        }
 
         let scope = &mut Scope::with_data(store);
         self.ui.handle_event(cx, event, scope);
@@ -352,7 +351,7 @@ impl MatchEvent for App {
 
             self.store.as_mut().unwrap().handle_action(action);
 
-            if let Some(_) = action.downcast_ref::<DownloadFileAction>() {
+            if action.downcast_ref::<DownloadFileAction>().is_some() {
                 self.notify_downloaded_files(cx);
             }
 
@@ -371,13 +370,10 @@ impl MatchEvent for App {
                 _ => {}
             }
 
-            match action.cast() {
-                ModelFileItemAction::Download(file_id) => {
-                    let (model, file) = store.get_model_and_file_download(&file_id);
-                    store.downloads.download_file(model, file);
-                    self.ui.redraw(cx);
-                }
-                _ => {}
+            if let ModelFileItemAction::Download(file_id) = action.cast() {
+                let (model, file) = store.get_model_and_file_download(&file_id);
+                store.downloads.download_file(model, file);
+                self.ui.redraw(cx);
             }
 
             match action.cast() {

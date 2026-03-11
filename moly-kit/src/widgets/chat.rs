@@ -510,11 +510,10 @@ impl Chat {
     }
 
     fn unlink_current_controller(&mut self) {
-        if let Some(plugin_id) = self.plugin_id {
-            if let Some(controller) = self.chat_controller.as_ref() {
+        if let Some(plugin_id) = self.plugin_id
+            && let Some(controller) = self.chat_controller.as_ref() {
                 controller.lock().unwrap().remove_plugin(plugin_id);
             }
-        }
 
         self.chat_controller = None;
         self.plugin_id = None;
@@ -553,14 +552,14 @@ impl ChatRef {
     ///
     /// Panics if the widget reference is empty or if it's already borrowed.
     pub fn read_with<R>(&self, f: impl FnOnce(&Chat) -> R) -> R {
-        f(&*self.read())
+        f(&self.read())
     }
 
     /// Mutable writer to the underlying [Chat].
     ///
     /// Panics if the widget reference is empty or if it's already borrowed.
     pub fn write_with<R>(&mut self, f: impl FnOnce(&mut Chat) -> R) -> R {
-        f(&mut *self.write())
+        f(&mut self.write())
     }
 }
 
@@ -601,7 +600,7 @@ impl ChatControllerPlugin for Plugin {
                             let mut lock = controller.lock().unwrap();
                             if let Some(bot_id) = lock.state().bot_id.clone() {
                                 let bot_still_available =
-                                    lock.state().bots.iter().any(|b| &b.id == &bot_id);
+                                    lock.state().bots.iter().any(|b| b.id == bot_id);
                                 if !bot_still_available {
                                     // Selected bot was removed/disabled - clear selection
                                     lock.dispatch_mutation(ChatStateMutation::SetBotId(None));

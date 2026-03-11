@@ -228,7 +228,7 @@ fn find_overlap_bytes(content: &str, incoming: &str) -> usize {
     for overlap in (1..=max_overlap).rev() {
         let content_start = content_bounds[content_bounds.len() - 1 - overlap];
         let incoming_end = incoming_bounds[overlap];
-        if &content[content_start..] == &incoming[..incoming_end] {
+        if content[content_start..] == incoming[..incoming_end] {
             return incoming_end;
         }
     }
@@ -490,15 +490,14 @@ impl BotClient for OpenClawClient {
                         match json["type"].as_str().unwrap_or("") {
                             "event" => {
                                 // Deduplicate events by seq number
-                                if let Some(seq) = json["seq"].as_u64() {
-                                    if !seen_seqs.insert(seq) {
+                                if let Some(seq) = json["seq"].as_u64()
+                                    && !seen_seqs.insert(seq) {
                                         log::trace!(
                                             "OpenClaw: skipping duplicate event seq={}",
                                             seq
                                         );
                                         continue;
                                     }
-                                }
                                 let event = json["event"].as_str().unwrap_or("");
                                 process_event(event, json.get("payload"), &mut content)
                             }

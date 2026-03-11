@@ -64,34 +64,31 @@ impl Download {
                 });
 
                 // Wait for progress updates
-                loop {
-                    match progress_rx.next().await {
-                        Some(result) => match result {
-                            Ok(response) => match response {
-                                FileDownloadResponse::Completed(_completed) => {
-                                    Cx::post_action(DownloadFileAction {
-                                        file_id: file_id.clone(),
-                                        kind: DownloadFileActionKind::StreamingDone,
-                                    });
-                                    break;
-                                }
-                                FileDownloadResponse::Progress(_file, value) => {
-                                    Cx::post_action(DownloadFileAction {
-                                        file_id: file_id.clone(),
-                                        kind: DownloadFileActionKind::Progress(value as f64),
-                                    })
-                                }
-                            },
-                            Err(err) => {
+                while let Some(result) = progress_rx.next().await {
+                    match result {
+                        Ok(response) => match response {
+                            FileDownloadResponse::Completed(_completed) => {
                                 Cx::post_action(DownloadFileAction {
                                     file_id: file_id.clone(),
-                                    kind: DownloadFileActionKind::Error,
+                                    kind: DownloadFileActionKind::StreamingDone,
                                 });
-                                eprintln!("Error downloading file: {:?}", err);
                                 break;
                             }
+                            FileDownloadResponse::Progress(_file, value) => {
+                                Cx::post_action(DownloadFileAction {
+                                    file_id: file_id.clone(),
+                                    kind: DownloadFileActionKind::Progress(value as f64),
+                                })
+                            }
                         },
-                        None => break,
+                        Err(err) => {
+                            Cx::post_action(DownloadFileAction {
+                                file_id: file_id.clone(),
+                                kind: DownloadFileActionKind::Error,
+                            });
+                            eprintln!("Error downloading file: {:?}", err);
+                            break;
+                        }
                     }
                 }
             } else {

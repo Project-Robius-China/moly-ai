@@ -102,7 +102,7 @@ impl Widget for ChatScreen {
 
 impl WidgetMatchEvent for ChatScreen {
     fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, scope: &mut Scope) {
-        if self.button(ids!(new_chat_button)).clicked(&actions) {
+        if self.button(ids!(new_chat_button)).clicked(actions) {
             cx.action(ChatAction::StartWithoutEntity);
             self.stack_navigation(ids!(navigation)).pop_to_root(cx);
             self.redraw(cx);
@@ -164,7 +164,7 @@ impl ChatScreen {
                             &supported_providers_list,
                             &available_bots,
                             &providers,
-                            &store,
+                            store,
                             ClientFilter::ChatModels,
                         )
                     }
@@ -173,7 +173,7 @@ impl ChatScreen {
                         &supported_providers_list,
                         &available_bots,
                         &providers,
-                        &store,
+                        store,
                     ),
                     ProviderType::OpenAiRealtime => create_openai_realtime_client(provider),
                     ProviderType::DeepInquire => create_deep_inquire_client(
@@ -181,21 +181,21 @@ impl ChatScreen {
                         &supported_providers_list,
                         &available_bots,
                         &providers,
-                        &store,
+                        store,
                     ),
                     ProviderType::OpenClaw => create_openclaw_client(
                         provider,
                         &supported_providers_list,
                         &available_bots,
                         &providers,
-                        &store,
+                        store,
                     ),
                     ProviderType::CrewRs => create_crewrs_client(
                         provider,
                         &supported_providers_list,
                         &available_bots,
                         &providers,
-                        &store,
+                        store,
                     ),
                 };
 
@@ -259,7 +259,7 @@ fn has_valid_credentials(provider: &Provider) -> bool {
     }
 }
 
-fn apply_icon(bots: &mut Vec<Bot>, icon_opt: &Option<LiveDependency>) {
+fn apply_icon(bots: &mut [Bot], icon_opt: &Option<LiveDependency>) {
     if let Some(icon) = icon_opt {
         for bot in bots.iter_mut() {
             bot.avatar = EntityAvatar::Image(icon.as_str().to_string());
@@ -280,7 +280,7 @@ fn apply_bot_filters(
             if let Some(provider_bot) = available_bots.get(&bot.id) {
                 let provider_enabled = providers
                     .get(&provider_bot.provider_id)
-                    .map_or(false, |p| p.enabled);
+                    .is_some_and(|p| p.enabled);
 
                 match filter {
                     ClientFilter::BotEnabled => provider_bot.enabled && provider_enabled,
@@ -345,12 +345,11 @@ fn create_openai_client(
 ) -> Option<Box<dyn BotClient>> {
     let mut client = OpenAiClient::new(provider.url.clone());
 
-    if let Some(key) = provider.api_key.as_ref() {
-        if let Err(e) = client.set_key(key) {
+    if let Some(key) = provider.api_key.as_ref()
+        && let Err(e) = client.set_key(key) {
             eprintln!("Failed to set API key for {}: {}", provider.name, e);
             return None;
         }
-    }
     client.set_tools_enabled(provider.tools_enabled);
 
     let mut map_client = MapClient::from(client);
@@ -378,12 +377,11 @@ fn create_openai_image_client(
     let client_url = provider.url.trim_start_matches('#').to_string();
     let mut client = OpenAiImageClient::new(client_url);
 
-    if let Some(key) = provider.api_key.as_ref() {
-        if let Err(e) = client.set_key(key) {
+    if let Some(key) = provider.api_key.as_ref()
+        && let Err(e) = client.set_key(key) {
             eprintln!("Failed to set API key for {}: {}", provider.name, e);
             return None;
         }
-    }
 
     let mut map_client = MapClient::from(client);
 
@@ -404,18 +402,16 @@ fn create_openai_realtime_client(provider: &Provider) -> Option<Box<dyn BotClien
     let client_url = provider.url.trim_start_matches('#').to_string();
     let mut client = OpenAiRealtimeClient::new(client_url);
 
-    if let Some(key) = provider.api_key.as_ref() {
-        if let Err(e) = client.set_key(key) {
+    if let Some(key) = provider.api_key.as_ref()
+        && let Err(e) = client.set_key(key) {
             eprintln!("Failed to set API key for {}: {}", provider.name, e);
             return None;
         }
-    }
-    if let Some(prompt) = provider.system_prompt.as_ref() {
-        if let Err(e) = client.set_system_prompt(prompt) {
+    if let Some(prompt) = provider.system_prompt.as_ref()
+        && let Err(e) = client.set_system_prompt(prompt) {
             eprintln!("Failed to set system prompt for {}: {}", provider.name, e);
             return None;
         }
-    }
     client.set_tools_enabled(provider.tools_enabled);
 
     Some(Box::new(client))
@@ -430,12 +426,11 @@ fn create_deep_inquire_client(
 ) -> Option<Box<dyn BotClient>> {
     let mut client = DeepInquireClient::new(provider.url.clone());
 
-    if let Some(key) = provider.api_key.as_ref() {
-        if let Err(e) = client.set_key(key) {
+    if let Some(key) = provider.api_key.as_ref()
+        && let Err(e) = client.set_key(key) {
             eprintln!("Failed to set API key for {}: {}", provider.name, e);
             return None;
         }
-    }
 
     let mut map_client = MapClient::from(client);
 
@@ -461,12 +456,11 @@ fn create_openclaw_client(
 ) -> Option<Box<dyn BotClient>> {
     let mut client = OpenClawClient::new(provider.url.clone());
 
-    if let Some(key) = provider.api_key.as_ref() {
-        if let Err(e) = client.set_key(key) {
+    if let Some(key) = provider.api_key.as_ref()
+        && let Err(e) = client.set_key(key) {
             eprintln!("Failed to set API key for {}: {}", provider.name, e);
             return None;
         }
-    }
 
     let mut map_client = MapClient::from(client);
 
@@ -492,12 +486,11 @@ fn create_crewrs_client(
 ) -> Option<Box<dyn BotClient>> {
     let mut client = CrewRsClient::new(provider.url.clone());
 
-    if let Some(key) = provider.api_key.as_ref() {
-        if let Err(e) = client.set_key(key) {
+    if let Some(key) = provider.api_key.as_ref()
+        && let Err(e) = client.set_key(key) {
             eprintln!("Failed to set API key for {}: {}", provider.name, e);
             return None;
         }
-    }
 
     let mut map_client = MapClient::from(client);
 

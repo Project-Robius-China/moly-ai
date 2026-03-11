@@ -66,26 +66,18 @@ impl Meta {
 impl MetaRef {
     /// Calls `get_value` on the inner widget.
     pub fn get_value<T: Any>(&self) -> Option<Ref<'_, T>> {
-        let Some(inner) = self.borrow() else {
-            return None;
-        };
+        let inner = self.borrow()?;
 
-        if inner.get_value::<T>().is_none() {
-            return None;
-        }
+        inner.get_value::<T>()?;
 
         Some(Ref::map(inner, |inner| inner.get_value::<T>().unwrap()))
     }
 
     /// Calls `get_value_mut` on the inner widget.
     pub fn get_value_mut<T: Any>(&self) -> Option<RefMut<'_, T>> {
-        let Some(inner) = self.borrow_mut() else {
-            return None;
-        };
+        let inner = self.borrow_mut()?;
 
-        if inner.get_value::<T>().is_none() {
-            return None;
-        }
+        inner.get_value::<T>()?;
 
         Some(RefMut::map(inner, |inner| {
             inner.get_value_mut::<T>().unwrap()

@@ -37,9 +37,7 @@ impl<R: RangeBounds<usize>> Iterator for ItemsRangeIter<R> {
         // Currently PortalList doesn't expose its children in an unconditional way,
         // that why I'm creating this iterator on the first place, on top of `get_item`
         // which esentialy does a hash map lookup.
-        let Some((_, item)) = self.list.get_item(self.current) else {
-            return None;
-        };
+        let (_, item) = self.list.get_item(self.current)?;
 
         self.current += 1;
         Some((self.current - 1, item))

@@ -140,14 +140,10 @@ impl Widget for Downloads {
             self.redraw(cx);
         }
 
-        match event.hits(cx, self.view.area()) {
-            Hit::FingerUp(fe) => {
-                if fe.was_tap() {
-                    self.toggle_collapse(cx);
-                }
+        if let Hit::FingerUp(fe) = event.hits(cx, self.view.area())
+            && fe.was_tap() {
+                self.toggle_collapse(cx);
             }
-            _ => {}
-        }
     }
 
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
@@ -207,7 +203,7 @@ impl Widget for Downloads {
 
 impl WidgetMatchEvent for Downloads {
     fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, _scope: &mut Scope) {
-        if self.button(ids!(collapse)).clicked(&actions) {
+        if self.button(ids!(collapse)).clicked(actions) {
             self.toggle_collapse(cx);
         }
     }

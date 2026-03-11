@@ -63,11 +63,11 @@ pub trait Pull {
     ///
     /// This method is implemented by [`Version`], but also [`Option<Version>`] for
     /// ergonomics.
-    fn pull<'a, 'b, T>(&'a mut self, versioned: &'b Versioned<T>) -> Option<&'b T>;
+    fn pull<'b, T>(&mut self, versioned: &'b Versioned<T>) -> Option<&'b T>;
 }
 
 impl Pull for Version {
-    fn pull<'a, 'b, T>(&'a mut self, versioned: &'b Versioned<T>) -> Option<&'b T> {
+    fn pull<'b, T>(&mut self, versioned: &'b Versioned<T>) -> Option<&'b T> {
         if *self != versioned.version() {
             *self = versioned.version();
             Some(versioned.data())
@@ -78,7 +78,7 @@ impl Pull for Version {
 }
 
 impl Pull for Option<Version> {
-    fn pull<'a, 'b, T>(&'a mut self, versioned: &'b Versioned<T>) -> Option<&'b T> {
+    fn pull<'b, T>(&mut self, versioned: &'b Versioned<T>) -> Option<&'b T> {
         match self {
             Some(v) => v.pull(versioned),
             None => {

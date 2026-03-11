@@ -351,20 +351,17 @@ impl Widget for Stages {
 impl WidgetMatchEvent for Stages {
     fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, _scope: &mut Scope) {
         for action in actions {
-            match action.cast() {
-                StageViewAction::StageViewClicked(clicked_stage) => {
-                    match clicked_stage {
-                        StageType::Thinking => {
-                            self.stage_view(ids!(content_stage)).set_active(cx, false);
-                        }
-                        StageType::Content => {
-                            self.stage_view(ids!(thinking_stage)).set_active(cx, false);
-                        }
-                        _ => {}
+            if let StageViewAction::StageViewClicked(clicked_stage) = action.cast() {
+                match clicked_stage {
+                    StageType::Thinking => {
+                        self.stage_view(ids!(content_stage)).set_active(cx, false);
                     }
-                    self.redraw(cx);
+                    StageType::Content => {
+                        self.stage_view(ids!(thinking_stage)).set_active(cx, false);
+                    }
+                    _ => {}
                 }
-                _ => {}
+                self.redraw(cx);
             }
         }
     }
@@ -382,13 +379,13 @@ impl Stages {
             match stage.stage_type {
                 StageType::Thinking => {
                     let mut thinking_stage = self.stage_view(ids!(thinking_stage));
-                    thinking_stage.set_stage(cx, &stage);
+                    thinking_stage.set_stage(cx, stage);
                     // Thinking streams if content stage doesn't exist yet
                     thinking_stage.set_streaming_state(cx, !has_content_stage);
                 }
                 StageType::Content => {
                     let mut content_stage = self.stage_view(ids!(content_stage));
-                    content_stage.set_stage(cx, &stage);
+                    content_stage.set_stage(cx, stage);
                     // Content streams if completion stage doesn't exist yet
                     content_stage.set_streaming_state(cx, !has_completion_stage);
                 }
@@ -525,7 +522,7 @@ impl StageView {
 
         // TODO: this should be replaced in the future by an AI-provided summary
         // Roughly grab the first 10 words of the first substage text to display as a preview
-        let stage_preview_text: Option<String> = stage.substages.get(0).and_then(|substage| {
+        let stage_preview_text: Option<String> = stage.substages.first().map(|substage| {
             // Since we're using plain text for summary, remove common markdown characters
             let cleaned_text = substage
                 .text
@@ -541,9 +538,9 @@ impl StageView {
 
             let words: Vec<&str> = cleaned_text.split_whitespace().collect();
             if words.len() > 10 {
-                Some(words[0..10].join(" "))
+                words[0..10].join(" ")
             } else {
-                Some(cleaned_text)
+                cleaned_text
             }
         });
 

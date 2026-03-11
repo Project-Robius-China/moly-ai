@@ -310,27 +310,27 @@ impl WidgetMatchEvent for ChatParams {
 
             let ip = &mut chat.inferences_params;
 
-            if let Some(value) = self.slider(ids!(temperature)).slided(&actions) {
+            if let Some(value) = self.slider(ids!(temperature)).slided(actions) {
                 ip.temperature = value as f32;
             }
 
-            if let Some(value) = self.slider(ids!(top_p)).slided(&actions) {
+            if let Some(value) = self.slider(ids!(top_p)).slided(actions) {
                 ip.top_p = value as f32;
             }
 
-            if let Some(value) = self.slider(ids!(max_tokens)).slided(&actions) {
+            if let Some(value) = self.slider(ids!(max_tokens)).slided(actions) {
                 ip.max_tokens = value as u32;
             }
 
-            if let Some(value) = self.slider(ids!(frequency_penalty)).slided(&actions) {
+            if let Some(value) = self.slider(ids!(frequency_penalty)).slided(actions) {
                 ip.frequency_penalty = value as f32;
             }
 
-            if let Some(value) = self.slider(ids!(presence_penalty)).slided(&actions) {
+            if let Some(value) = self.slider(ids!(presence_penalty)).slided(actions) {
                 ip.presence_penalty = value as f32;
             }
 
-            if let Some(value) = self.text_input(ids!(stop)).changed(&actions) {
+            if let Some(value) = self.text_input(ids!(stop)).changed(actions) {
                 ip.stop = value;
             }
 
@@ -338,7 +338,7 @@ impl WidgetMatchEvent for ChatParams {
                 ip.stream = value;
             }
 
-            if let Some(value) = self.text_input(ids!(system_prompt)).changed(&actions) {
+            if let Some(value) = self.text_input(ids!(system_prompt)).changed(actions) {
                 if value.is_empty() {
                     chat.system_prompt = None;
                 } else {
@@ -423,10 +423,10 @@ impl ChatParams {
         let slider = self.slider(slider_id);
         let mut tooltip = self.deref.tooltip(ids!(tooltip));
 
-        if let Some(rect) = slider.label_hover_in(&actions) {
+        if let Some(rect) = slider.label_hover_in(actions) {
             tooltip.show_with_options(cx, rect.pos + offset, &text);
         }
-        if slider.label_hover_out(&actions) {
+        if slider.label_hover_out(actions) {
             tooltip.hide(cx);
         }
     }
@@ -442,10 +442,10 @@ impl ChatParams {
         let label = self.label(label_id);
         let mut tooltip = self.deref.tooltip(ids!(tooltip));
 
-        if let Some(rect) = label.hover_in(&actions) {
+        if let Some(rect) = label.hover_in(actions) {
             tooltip.show_with_options(cx, rect.pos + offset, &text);
         }
-        if label.hover_out(&actions) {
+        if label.hover_out(actions) {
             tooltip.hide(cx);
         }
     }

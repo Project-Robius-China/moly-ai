@@ -39,8 +39,11 @@ enum CrewRsEvent {
     /// Final summary with the complete assembled content.
     #[serde(rename = "done")]
     Done {
+        #[allow(dead_code)]
         content: String,
+        #[allow(dead_code)]
         input_tokens: u64,
+        #[allow(dead_code)]
         output_tokens: u64,
     },
 }
@@ -282,7 +285,7 @@ impl BotClient for CrewRsClient {
                 }
 
                 // Yield periodically to reduce back-pressure
-                if message_count % yield_frequency == 0
+                if message_count.is_multiple_of(yield_frequency)
                     || message_count < 20
                 {
                     yield ClientResult::new_ok(content.clone());

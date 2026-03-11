@@ -184,13 +184,14 @@ impl ModelSelectorList {
                 };
 
                 // Filter by custom filter function (if provided)
-                let passes_filter = self.filter.as_ref().map_or(true, |f| f.should_show(bot));
+                let passes_filter = self.filter.as_ref().is_none_or(|f| f.should_show(bot));
 
                 matches_search && passes_filter
             })
             .collect();
 
         // Group bots by their group ID
+        #[allow(clippy::type_complexity)]
         let mut groups: HashMap<String, ((String, Option<EntityAvatar>), Vec<&Bot>)> =
             HashMap::new();
         for bot in filtered_bots {
@@ -245,7 +246,7 @@ impl ModelSelectorList {
                 }
             }
 
-            let _ = section_label.draw_all(cx, &mut Scope::empty());
+            section_label.draw_all(cx, &mut Scope::empty());
             total_height += section_label.area().rect(cx).size.y;
 
             // Sort bots within group by name
@@ -265,7 +266,7 @@ impl ModelSelectorList {
                 let is_selected = selected_bot_id == Some(&bot.id);
                 item.set_selected(is_selected);
 
-                let _ = item_widget.draw_all(cx, &mut Scope::empty());
+                item_widget.draw_all(cx, &mut Scope::empty());
                 total_height += item_widget.area().rect(cx).size.y;
             }
         }

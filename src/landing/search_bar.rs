@@ -171,7 +171,7 @@ impl Widget for SearchBar {
 
             if keywords.len() > MIN_SEARCH_LENGTH {
                 cx.action(StoreAction::Search(keywords.to_string()));
-            } else if keywords.len() == 0 {
+            } else if keywords.is_empty() {
                 cx.action(StoreAction::ResetSearch);
             }
         }
@@ -188,7 +188,7 @@ impl WidgetMatchEvent for SearchBar {
         let clear_text_button = self.button(ids!(clear_text_button));
 
         if let Some((keywords, _)) = input.returned(actions) {
-            if keywords.len() > 0 {
+            if !keywords.is_empty() {
                 cx.action(StoreAction::Search(keywords.to_string()));
             } else {
                 cx.action(StoreAction::ResetSearch);

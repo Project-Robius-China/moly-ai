@@ -174,15 +174,13 @@ impl Widget for ModelSelector {
         }
 
         // On mobile, handle clicks on background view to dismiss modal
-        if self.open && !cx.display_context.is_desktop() {
-            if let Hit::FingerUp(fe) = event.hits(cx, self.view(ids!(modal.bg_view)).area()) {
-                if fe.was_tap() {
+        if self.open && !cx.display_context.is_desktop()
+            && let Hit::FingerUp(fe) = event.hits(cx, self.view(ids!(modal.bg_view)).area())
+                && fe.was_tap() {
                     self.close_modal(cx);
                     self.clear_search(cx);
                     self.button(ids!(button)).reset_hover(cx);
                 }
-            }
-        }
     }
 
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
@@ -245,8 +243,7 @@ impl WidgetMatchEvent for ModelSelector {
         if let Some(text) = self
             .text_input(ids!(options.search_container.search_input))
             .changed(actions)
-        {
-            if let Some(mut list) = self
+            && let Some(mut list) = self
                 .widget(ids!(options.list_container.list))
                 .borrow_mut::<ModelSelectorList>()
             {
@@ -254,7 +251,6 @@ impl WidgetMatchEvent for ModelSelector {
                 list.items.clear();
                 list.total_height = None;
             }
-        }
 
         // Handle bot selection from list items
         // Only process actions from our own list widget to avoid handling global actions
@@ -269,22 +265,19 @@ impl WidgetMatchEvent for ModelSelector {
                 continue; // Skip actions from other ModelSelector instances
             }
 
-            match action.cast() {
-                ModelSelectorItemAction::BotSelected(bot_id) => {
-                    // Dispatch mutation to controller
-                    if let Some(controller) = &self.chat_controller {
-                        controller
-                            .lock()
-                            .unwrap()
-                            .dispatch_mutation(ChatStateMutation::SetBotId(Some(bot_id)));
-                    }
-
-                    self.button(ids!(button)).reset_hover(cx);
-                    self.close_modal(cx);
-                    self.clear_search(cx);
-                    self.redraw(cx);
+            if let ModelSelectorItemAction::BotSelected(bot_id) = action.cast() {
+                // Dispatch mutation to controller
+                if let Some(controller) = &self.chat_controller {
+                    controller
+                        .lock()
+                        .unwrap()
+                        .dispatch_mutation(ChatStateMutation::SetBotId(Some(bot_id)));
                 }
-                _ => {}
+
+                self.button(ids!(button)).reset_hover(cx);
+                self.close_modal(cx);
+                self.clear_search(cx);
+                self.redraw(cx);
             }
         }
     }
@@ -353,7 +346,7 @@ impl ModelSelector {
             );
         }
 
-        modal.open(cx);
+        modal.open_as_dialog(cx);
     }
 
     fn close_modal(&mut self, cx: &mut Cx) {
@@ -397,14 +390,13 @@ impl ModelSelectorRef {
     where
         F: Fn(&Bot) -> BotGroup + 'static,
     {
-        if let Some(inner) = self.borrow_mut() {
-            if let Some(mut list) = inner
+        if let Some(inner) = self.borrow_mut()
+            && let Some(mut list) = inner
                 .widget(ids!(options.list_container.list))
                 .borrow_mut::<ModelSelectorList>()
             {
                 list.grouping = Box::new(grouping);
             }
-        }
     }
 }
 

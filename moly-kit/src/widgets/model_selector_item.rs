@@ -108,15 +108,14 @@ impl Widget for ModelSelectorItem {
             }
             Hit::FingerUp(fe) => {
                 self.animator_play(cx, ids!(hover.off));
-                if fe.was_tap() {
-                    if let Some(bot) = &self.bot {
+                if fe.was_tap()
+                    && let Some(bot) = &self.bot {
                         cx.widget_action(
                             self.widget_uid(),
                             &scope.path,
                             ModelSelectorItemAction::BotSelected(bot.id.clone()),
                         );
                     }
-                }
             }
             Hit::FingerHoverIn(_) => {
                 self.animator_play(cx, ids!(hover.on));

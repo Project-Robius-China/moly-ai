@@ -39,7 +39,7 @@ impl Widget for CitationList {
         let list_uid = self.portal_list(ids!(list)).widget_uid();
         while let Some(widget) = self.deref.draw_walk(cx, scope, walk).step() {
             if widget.widget_uid() == list_uid {
-                self.draw_list(cx, &mut *widget.as_portal_list().borrow_mut().unwrap());
+                self.draw_list(cx, &mut widget.as_portal_list().borrow_mut().unwrap());
             }
         }
 

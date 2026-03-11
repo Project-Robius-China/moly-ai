@@ -70,7 +70,7 @@ impl Widget for AttachmentViewerModal {
 
 impl AttachmentViewerModal {
     pub fn open(&mut self, cx: &mut Cx, attachment: Attachment) {
-        self.modal_ref().open(cx);
+        self.modal_ref().open_as_dialog(cx);
         self.attachment_view(ids!(attachment))
             .borrow_mut()
             .unwrap()

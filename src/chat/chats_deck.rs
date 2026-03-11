@@ -86,11 +86,10 @@ impl Widget for ChatsDeck {
         cx.begin_turtle(walk, self.layout);
 
         // Draw only the currently visible chat
-        if let Some(chat_id) = self.currently_visible_chat_id {
-            if let Some(chat_view) = self.chat_view_refs.get_mut(&chat_id) {
+        if let Some(chat_id) = self.currently_visible_chat_id
+            && let Some(chat_view) = self.chat_view_refs.get_mut(&chat_id) {
                 let _ = chat_view.draw(cx, scope);
             }
-        }
 
         cx.end_turtle();
         DrawStep::done()
@@ -121,32 +120,28 @@ impl WidgetMatchEvent for ChatsDeck {
             }
 
             // Handle chat selection (from chat history)
-            match action.cast() {
-                ChatAction::ChatSelected(chat_id) => {
-                    let selected_chat = store.chats.get_chat_by_id(chat_id);
+            if let ChatAction::ChatSelected(chat_id) = action.cast() {
+                let selected_chat = store.chats.get_chat_by_id(chat_id);
 
-                    if let Some(chat) = selected_chat {
-                        store
-                            .preferences
-                            .set_current_chat_model(chat.borrow().associated_bot.clone());
+                if let Some(chat) = selected_chat {
+                    store
+                        .preferences
+                        .set_current_chat_model(chat.borrow().associated_bot.clone());
 
-                        self.create_or_update_chat_view(cx, &chat.borrow());
-                    }
+                    self.create_or_update_chat_view(cx, &chat.borrow());
                 }
-                _ => {}
             }
 
             // Handle Context Capture
             if let CaptureAction::Capture { event } = action.cast() {
                 // Paste the captured text into the currently visible chat
-                if let Some(chat_id) = self.currently_visible_chat_id {
-                    if let Some(chat_view) = self.chat_view_refs.get_mut(&chat_id) {
+                if let Some(chat_id) = self.currently_visible_chat_id
+                    && let Some(chat_view) = self.chat_view_refs.get_mut(&chat_id) {
                         chat_view
                             .prompt_input(ids!(prompt))
                             .write()
                             .set_text(cx, event.contents());
                     }
-                }
             }
         }
     }

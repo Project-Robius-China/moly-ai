@@ -201,7 +201,7 @@ pub fn global() -> FileSystem<impl Adapter> {
             static FS: LazyLock<FileSystem<MobileAdapter>> = LazyLock::new(|| FileSystem::new(MobileAdapter::default()));
         } else {
             use adapters::native::NativeAdapter;
-            static FS: LazyLock<FileSystem<NativeAdapter>> = LazyLock::new(|| FileSystem::new(NativeAdapter::default()));
+            static FS: LazyLock<FileSystem<NativeAdapter>> = LazyLock::new(|| FileSystem::new(NativeAdapter));
         }
     }
 

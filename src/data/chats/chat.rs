@@ -203,8 +203,8 @@ impl Chat {
     pub fn update_title_based_on_first_message(&mut self) {
         // If it hasnt been updated, and theres at least one message, use the first
         // one as title. Else we just return the default one.
-        if matches!(self.title_state, TitleState::Default) {
-            if let Some(message) = self.messages.first() {
+        if matches!(self.title_state, TitleState::Default)
+            && let Some(message) = self.messages.first() {
                 let max_char_length = 25;
                 let ellipsis = "...";
 
@@ -224,7 +224,6 @@ impl Chat {
 
                 self.set_title(title);
             }
-        }
     }
 
     pub fn delete_message(&mut self, message_index: usize) {

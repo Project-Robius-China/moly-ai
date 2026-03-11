@@ -32,7 +32,7 @@ pub fn persistence_reader()
         Box::pin(async move {
             let fs = super::filesystem::global();
             // TODO: Do not use "other" error kind.
-            let content = fs.read(&path).await.map_err(|e| std::io::Error::other(e))?;
+            let content = fs.read(&path).await.map_err(std::io::Error::other)?;
             Ok(content.into())
         })
     }
@@ -55,7 +55,7 @@ pub async fn delete_attachment(attachment: &Attachment) -> std::io::Result<()> {
     let fs = super::filesystem::global();
     fs.remove(path)
         .await
-        .map_err(|e| std::io::Error::other(e))?;
+        .map_err(std::io::Error::other)?;
 
     Ok(())
 }
@@ -67,6 +67,6 @@ pub async fn write_attachment_to_key(attachment: &Attachment, key: &str) -> std:
     let path = PathBuf::from(key);
     fs.queue_write(path, content.to_vec())
         .await
-        .map_err(|e| std::io::Error::other(e))?;
+        .map_err(std::io::Error::other)?;
     Ok(())
 }

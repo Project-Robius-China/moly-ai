@@ -287,13 +287,7 @@ impl WidgetMatchEvent for ChatScreenMobile {
                 button_rect.pos.y + button_rect.size.y,
             );
 
-            modal.apply_over(
-                cx,
-                live! {
-                    content: { margin: { left: (coords.x), top: (coords.y) }}
-                },
-            );
-            modal.open(cx);
+            modal.open_as_popup(cx, coords);
         }
 
         // Go to Providers

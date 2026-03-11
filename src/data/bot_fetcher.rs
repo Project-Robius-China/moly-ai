@@ -161,7 +161,7 @@ fn fetch_models_with_client<F, M>(
             Ok(bots) => {
                 let models: Vec<ProviderBot> = bots
                     .into_iter()
-                    .filter(|bot| filter.map_or(true, |f| f(&bot.id)))
+                    .filter(|bot| filter.is_none_or(|f| f(&bot.id)))
                     .map(|bot| Bot {
                         // The client Moly interacts with in the `Store` is a `RouterClient`.
                         // This module is creating specific clients to obtain the bots that will

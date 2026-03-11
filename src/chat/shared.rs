@@ -89,7 +89,7 @@ impl ChatAgentAvatarRef {
         }
     }
 
-    pub fn set_visible(&mut self, visible: bool) -> () {
+    pub fn set_visible(&mut self, visible: bool) {
         if let Some(mut inner) = self.borrow_mut() {
             inner.view.visible = visible;
         }

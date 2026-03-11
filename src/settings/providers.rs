@@ -295,8 +295,8 @@ impl Widget for Providers {
         // so the event will not be received.
         //
         // I think this demostrates that `after_new_from_doc != initialize`.
-        if !self.initialized {
-            if cx.display_context.is_desktop() {
+        if !self.initialized
+            && cx.display_context.is_desktop() {
                 self.initialized = true;
                 let default_provider_id = "anthropic".to_string();
                 self.selected_provider_id = Some(default_provider_id.clone());
@@ -305,7 +305,6 @@ impl Widget for Providers {
                     default_provider_id,
                 ));
             }
-        }
 
         let store = scope.data.get_mut::<Store>().unwrap();
         if store.provider_icons.is_empty() {
@@ -467,13 +466,12 @@ impl Widget for ProviderItem {
 
 impl WidgetMatchEvent for ProviderItem {
     fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, _scope: &mut Scope) {
-        if let Some(finger_up) = self.view(ids!(main_view)).finger_up(actions) {
-            if finger_up.was_tap() {
+        if let Some(finger_up) = self.view(ids!(main_view)).finger_up(actions)
+            && finger_up.was_tap() {
                 cx.action(ConnectionSettingsAction::ProviderSelected(
                     self.provider.id.clone(),
                 ));
             }
-        }
     }
 }
 

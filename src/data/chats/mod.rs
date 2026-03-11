@@ -137,11 +137,10 @@ impl Chats {
             new_chat.associated_bot = Some(bot_id);
         } else {
             // Default to the most recently used bot
-            if let Some(last_chat_id) = self.get_last_selected_chat_id() {
-                if let Some(last_chat) = self.get_chat_by_id(last_chat_id) {
+            if let Some(last_chat_id) = self.get_last_selected_chat_id()
+                && let Some(last_chat) = self.get_chat_by_id(last_chat_id) {
                     new_chat.associated_bot = last_chat.borrow().associated_bot.clone();
                 }
-            }
         }
 
         new_chat.save_and_forget();
@@ -229,8 +228,8 @@ impl Chats {
                     });
 
                 let mut has_recommendation_list = false;
-                if let Some(sp) = maybe_supported {
-                    if let Some(supported_models) = &sp.supported_models {
+                if let Some(sp) = maybe_supported
+                    && let Some(supported_models) = &sp.supported_models {
                         has_recommendation_list = true;
                         for model in &mut fetched_models {
                             if supported_models.iter().any(|supported_model| {
@@ -242,7 +241,6 @@ impl Chats {
                             }
                         }
                     }
-                }
 
                 // Insert the fetched models in memory, respecting preference "enabled" if it exists
                 for mut provider_bot in fetched_models {
@@ -308,18 +306,15 @@ impl Chats {
             _ => {}
         }
 
-        match provider_syncing_status {
-            // Increase the current count of providers being synced, regardless of the result
-            // We just care to know that we've already got a response for each provider
-            ProviderSyncingStatus::Syncing(syncing) => {
-                let new_current = syncing.current + 1;
-                if new_current < syncing.total {
-                    syncing.current = new_current;
-                } else {
-                    *provider_syncing_status = ProviderSyncingStatus::Synced;
-                }
+        // Increase the current count of providers being synced, regardless of the result
+        // We just care to know that we've already got a response for each provider
+        if let ProviderSyncingStatus::Syncing(syncing) = provider_syncing_status {
+            let new_current = syncing.current + 1;
+            if new_current < syncing.total {
+                syncing.current = new_current;
+            } else {
+                *provider_syncing_status = ProviderSyncingStatus::Synced;
             }
-            _ => {}
         }
 
         fetched_from_moly_server
@@ -424,7 +419,7 @@ impl Chats {
                             && self
                                 .providers
                                 .get(&m.provider_id)
-                                .map_or(false, |p| p.enabled)))
+                                .is_some_and(|p| p.enabled)))
             })
             .cloned()
             .collect()
@@ -442,7 +437,7 @@ impl Chats {
                         && self
                             .providers
                             .get(&pb.provider_id)
-                            .map_or(false, |p| p.enabled))
+                            .is_some_and(|p| p.enabled))
             })
             .cloned()
             .collect()
@@ -461,7 +456,7 @@ impl Chats {
                             && self
                                 .providers
                                 .get(&m.provider_id)
-                                .map_or(false, |p| p.enabled)))
+                                .is_some_and(|p| p.enabled)))
             })
             .cloned()
             .collect()

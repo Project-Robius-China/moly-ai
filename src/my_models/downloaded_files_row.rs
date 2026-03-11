@@ -215,14 +215,14 @@ impl Widget for DownloadedFilesRow {
         self.label(ids!(
             h_wrapper.model_file.base_model_tag.base_model.attr_name
         ))
-        .set_text(cx, &base_model);
+        .set_text(cx, base_model);
 
         // Parameters tag
         let parameters = dash_if_empty(&downloaded_file.model.size);
         self.label(ids!(
             h_wrapper.model_file.parameters_tag.parameters.attr_name
         ))
-        .set_text(cx, &parameters);
+        .set_text(cx, parameters);
 
         // Version tag
         let filename = format!(
@@ -248,15 +248,14 @@ impl Widget for DownloadedFilesRow {
 
 impl WidgetMatchEvent for DownloadedFilesRow {
     fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, scope: &mut Scope) {
-        if self.button(ids!(start_chat_button)).clicked(actions) {
-            if let Some(file_id) = &self.file_id {
+        if self.button(ids!(start_chat_button)).clicked(actions)
+            && let Some(file_id) = &self.file_id {
                 let store = scope.data.get_mut::<Store>().unwrap();
                 let bot_id = store.chats.get_bot_id_by_file_id(file_id);
                 if let Some(bot_id) = bot_id {
                     cx.action(ChatAction::Start(bot_id));
                 }
             }
-        }
 
         if self.button(ids!(row_actions.info_button)).clicked(actions) {
             self.moly_modal(ids!(info_modal)).open_as_dialog(cx);

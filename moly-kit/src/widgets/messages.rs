@@ -585,7 +585,7 @@ impl Messages {
             .as_ref()
             .expect("no chat controller set");
 
-        if chat_controller.lock().unwrap().state().messages.len() > 0 {
+        if !chat_controller.lock().unwrap().state().messages.is_empty() {
             let list = self.portal_list(ids!(list));
 
             // Use immediate scroll instead of smooth scroll to prevent continuous scroll actions
@@ -621,7 +621,7 @@ impl Messages {
             .as_ref()
             .expect("no chat controller set");
 
-        if chat_controller.lock().unwrap().state().messages.len() > 0 {
+        if !chat_controller.lock().unwrap().state().messages.is_empty() {
             let list = self.portal_list(ids!(list));
             list.smooth_scroll_to_end(cx, 100.0, None);
         }
@@ -746,14 +746,13 @@ impl Messages {
 
         // Handle code copy
         // Since the Markdown widget could have multiple code blocks, we need the widget that triggered the action
-        if let Some(wa) = event.actions().widget_action(ids!(copy_code_button)) {
-            if wa.widget().as_button().pressed(event.actions()) {
+        if let Some(wa) = event.actions().widget_action(ids!(copy_code_button))
+            && wa.widget().as_button().pressed(event.actions()) {
                 // nth(2) refers to the code view in the MessageMarkdown widget
                 let code_view = wa.widget_nth(2).widget(ids!(code_view));
                 let text_to_copy = code_view.as_code_view().text();
                 cx.copy_to_clipboard(&text_to_copy);
             }
-        }
     }
 
     fn apply_editor_visibility(&mut self, cx: &mut Cx, widget: &WidgetRef, index: usize) {
@@ -783,11 +782,10 @@ impl Messages {
 fn extract_status_code(error_text: &str) -> Option<u16> {
     let mut tokens = error_text.split_whitespace();
     while let Some(token) = tokens.next() {
-        if token.eq_ignore_ascii_case("status") {
-            if let Some(code) = tokens.next().and_then(|t| t.parse::<u16>().ok()) {
+        if token.eq_ignore_ascii_case("status")
+            && let Some(code) = tokens.next().and_then(|t| t.parse::<u16>().ok()) {
                 return Some(code);
             }
-        }
     }
     None
 }
@@ -837,13 +835,13 @@ impl MessagesRef {
     ///
     /// Panics if the widget reference is empty or if it's already borrowed.
     pub fn read_with<R>(&self, f: impl FnOnce(&Messages) -> R) -> R {
-        f(&*self.read())
+        f(&self.read())
     }
 
     /// Mutable writer to the underlying [[Messages]].
     ///
     /// Panics if the widget reference is empty or if it's already borrowed.
     pub fn write_with<R>(&mut self, f: impl FnOnce(&mut Messages) -> R) -> R {
-        f(&mut *self.write())
+        f(&mut self.write())
     }
 }

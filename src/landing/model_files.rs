@@ -192,14 +192,13 @@ impl Widget for ModelFiles {
         self.view.handle_event(cx, event, scope);
         self.widget_match_event(cx, event, scope);
 
-        if self.animator_handle_event(cx, event).must_redraw() {
-            if let Some(total_height) = self.actual_height {
+        if self.animator_handle_event(cx, event).must_redraw()
+            && let Some(total_height) = self.actual_height {
                 let height = self.show_all_animation_progress * total_height;
                 self.view(ids!(remaining_files_wrapper))
                     .apply_over(cx, live! {height: (height)});
                 self.redraw(cx);
             }
-        }
     }
 
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {

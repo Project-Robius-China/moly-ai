@@ -508,7 +508,7 @@ impl Widget for ChatLine {
 
         if self
             .view(ids!(error_details_toggle))
-            .finger_up(&actions)
+            .finger_up(actions)
             .is_some()
         {
             cx.widget_action(

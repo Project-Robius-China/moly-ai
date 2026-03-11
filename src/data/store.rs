@@ -325,7 +325,7 @@ impl Store {
         self.search.handle_action(action);
         self.downloads.handle_action(action);
 
-        if let Some(_) = action.downcast_ref::<DownloadFileAction>() {
+        if action.downcast_ref::<DownloadFileAction>().is_some() {
             self.update_downloads();
         }
     }

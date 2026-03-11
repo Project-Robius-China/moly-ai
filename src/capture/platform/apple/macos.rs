@@ -49,14 +49,13 @@ define_class!(
                 contents = pasteboard.stringForType(NSPasteboardTypeString);
             }
 
-            if let Some(contents) = contents {
-                if let Ok(handler) = self.ivars().handler.lock() {
+            if let Some(contents) = contents
+                && let Ok(handler) = self.ivars().handler.lock() {
                     handler.capture(Event {
                         contents: contents.to_string(),
                         source: Source::System,
                     });
                 }
-            }
         }
     }
 );

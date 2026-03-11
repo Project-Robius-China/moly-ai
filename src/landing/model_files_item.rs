@@ -331,22 +331,21 @@ impl Widget for ModelFilesItem {
 impl WidgetMatchEvent for ModelFilesItem {
     fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, scope: &mut Scope) {
         for actions in actions {
-            if let Some(action) = actions.downcast_ref::<DownloadFileAction>() {
-                if self.file_id.as_ref() == Some(&action.file_id) {
+            if let Some(action) = actions.downcast_ref::<DownloadFileAction>()
+                && self.file_id.as_ref() == Some(&action.file_id) {
                     self.redraw(cx);
                 }
-            }
         }
 
         let Some(file_id) = self.file_id.clone() else {
             return;
         };
 
-        if self.button(ids!(download_button)).clicked(&actions) {
+        if self.button(ids!(download_button)).clicked(actions) {
             cx.action(ModelFileItemAction::Download(file_id.clone()));
         }
 
-        if self.button(ids!(start_chat_button)).clicked(&actions) {
+        if self.button(ids!(start_chat_button)).clicked(actions) {
             let store = scope.data.get_mut::<Store>().unwrap();
             let bot_id = store.chats.get_bot_id_by_file_id(&file_id);
             if let Some(bot_id) = bot_id {
@@ -356,16 +355,16 @@ impl WidgetMatchEvent for ModelFilesItem {
 
         if [ids!(resume_download_button), ids!(retry_download_button)]
             .iter()
-            .any(|id| self.button(*id).clicked(&actions))
+            .any(|id| self.button(*id).clicked(actions))
         {
             cx.action(DownloadAction::Play(file_id.clone()));
         }
 
-        if self.button(ids!(pause_download_button)).clicked(&actions) {
+        if self.button(ids!(pause_download_button)).clicked(actions) {
             cx.action(DownloadAction::Pause(file_id.clone()));
         }
 
-        if self.button(ids!(cancel_download_button)).clicked(&actions) {
+        if self.button(ids!(cancel_download_button)).clicked(actions) {
             cx.action(DownloadAction::Cancel(file_id.clone()));
         }
     }

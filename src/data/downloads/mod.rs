@@ -182,11 +182,10 @@ impl Downloads {
     }
 
     pub fn cancel_download_file(&mut self, file_id: &FileId) {
-        if let Some(current_download) = self.current_downloads.get(file_id) {
-            if current_download.is_initializing() {
+        if let Some(current_download) = self.current_downloads.get(file_id)
+            && current_download.is_initializing() {
                 return;
-            }
-        };
+            };
 
         let file_id = file_id.clone();
         let moly_client = self.moly_client.clone();
@@ -221,11 +220,10 @@ impl Downloads {
     }
 
     pub fn handle_action(&mut self, action: &Action) {
-        if let Some(action) = action.downcast_ref::<DownloadFileAction>() {
-            if let Some(download) = self.current_downloads.get_mut(&action.file_id) {
+        if let Some(action) = action.downcast_ref::<DownloadFileAction>()
+            && let Some(download) = self.current_downloads.get_mut(&action.file_id) {
                 download.handle_action(action);
             }
-        }
     }
 
     /// This function is invoked after handling a download file action. It updates the
@@ -238,7 +236,7 @@ impl Downloads {
             if let Some(pending) = self
                 .pending_downloads
                 .iter_mut()
-                .find(|d| d.file.id == id.to_string())
+                .find(|d| d.file.id == *id)
             {
                 match download.state {
                     DownloadState::Initializing(_) => {

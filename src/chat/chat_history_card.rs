@@ -373,8 +373,8 @@ impl WidgetMatchEvent for ChatHistoryCard {
             return;
         }
 
-        if let Some(fe) = self.view(ids!(content)).finger_down(actions) {
-            if fe.tap_count == 1 {
+        if let Some(fe) = self.view(ids!(content)).finger_down(actions)
+            && fe.tap_count == 1 {
                 let store = scope.data.get_mut::<Store>().unwrap();
                 store.chats.set_current_chat(Some(self.chat_id));
 
@@ -386,7 +386,6 @@ impl WidgetMatchEvent for ChatHistoryCard {
                 cx.action(ChatAction::ChatSelected(self.chat_id));
                 self.redraw(cx);
             }
-        }
 
         for action in actions {
             if matches!(
@@ -414,7 +413,7 @@ impl ChatHistoryCard {
         if let TitleState::Editable = self.title_edition_state {
             self.view
                 .text_input(ids!(title_input))
-                .set_text(cx, &text.trim());
+                .set_text(cx, text.trim());
         }
         self.label(ids!(model_or_agent_name_label))
             .set_text(cx, &human_readable_name(caption));

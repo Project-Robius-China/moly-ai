@@ -44,7 +44,9 @@ pub fn human_readable_name(model_filename: &str) -> String {
         .replace("_m", "_M")
         .replace("_l", "_L");
 
-    let name = name
+    
+
+    name
         .split_whitespace()
         .map(|word| {
             let mut chars = word.chars();
@@ -54,7 +56,5 @@ pub fn human_readable_name(model_filename: &str) -> String {
             }
         })
         .collect::<Vec<String>>()
-        .join(" ");
-
-    name
+        .join(" ")
 }

@@ -478,15 +478,12 @@ impl Widget for MolyCodeView {
             session.handle_changes();
 
             // Sync the text field back to match the document state for text changes
-            match action {
-                CodeEditorAction::TextDidChange => {
-                    let document_text = session.document().as_text().to_string();
-                    if self.text.as_ref() != &document_text {
-                        self.text.as_mut_empty().clear();
-                        self.text.as_mut_empty().push_str(&document_text);
-                    }
+            if action == CodeEditorAction::TextDidChange {
+                let document_text = session.document().as_text().to_string();
+                if self.text.as_ref() != document_text {
+                    self.text.as_mut_empty().clear();
+                    self.text.as_mut_empty().push_str(&document_text);
                 }
-                _ => {}
             }
         }
     }

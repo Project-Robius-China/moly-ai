@@ -154,11 +154,10 @@ impl Widget for EntityButton {
 
 impl EntityButton {
     pub fn clicked(&self, actions: &Actions) -> bool {
-        if let Some(item) = actions.find_widget_action(self.view.widget_uid()) {
-            if let ViewAction::FingerDown(fd) = item.cast() {
+        if let Some(item) = actions.find_widget_action(self.view.widget_uid())
+            && let ViewAction::FingerDown(fd) = item.cast() {
                 return fd.tap_count == 1;
             }
-        }
 
         false
     }
@@ -180,7 +179,7 @@ impl EntityButton {
         let bot = store.chats.get_bot_or_placeholder(&bot_id);
 
         let name = bot.human_readable_name();
-        name_label.set_text(cx, &name);
+        name_label.set_text(cx, name);
 
         if store.chats.is_agent(&bot_id) {
             avatar.set_visible(true);
