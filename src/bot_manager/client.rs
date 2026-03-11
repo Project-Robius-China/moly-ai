@@ -44,6 +44,42 @@ impl BotFatherClient {
     }
 }
 
+impl BotFatherClient {
+    /// Returns the welcome message content with quick reply buttons.
+    pub fn welcome_message() -> MessageContent {
+        use moly_kit::aitk::protocol::{ButtonStyle, QuickReplyButton};
+
+        MessageContent {
+            text: "\
+Welcome to BotFather! I can help you create and manage bots.
+
+Available commands:
+/newbot — Create a new bot
+/mybots — Manage your bots
+/help — Show help"
+                .to_string(),
+            quick_replies: vec![
+                QuickReplyButton {
+                    label: "Create a Bot".to_string(),
+                    action: "/newbot".to_string(),
+                    style: ButtonStyle::Primary,
+                },
+                QuickReplyButton {
+                    label: "My Bots".to_string(),
+                    action: "/mybots".to_string(),
+                    style: ButtonStyle::Secondary,
+                },
+                QuickReplyButton {
+                    label: "Help".to_string(),
+                    action: "/help".to_string(),
+                    style: ButtonStyle::Subtle,
+                },
+            ],
+            ..Default::default()
+        }
+    }
+}
+
 impl BotClient for BotFatherClient {
     fn bots(
         &mut self,
@@ -117,6 +153,24 @@ impl BotClient for BotFatherClient {
         };
 
         Box::pin(stream)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_botfather_welcome_message() {
+        let content = BotFatherClient::welcome_message();
+        assert!(content.text.contains("Welcome to BotFather"));
+        assert_eq!(content.quick_replies.len(), 3);
+        assert_eq!(content.quick_replies[0].label, "Create a Bot");
+        assert_eq!(content.quick_replies[0].action, "/newbot");
+        assert_eq!(content.quick_replies[1].label, "My Bots");
+        assert_eq!(content.quick_replies[1].action, "/mybots");
+        assert_eq!(content.quick_replies[2].label, "Help");
+        assert_eq!(content.quick_replies[2].action, "/help");
     }
 }
 

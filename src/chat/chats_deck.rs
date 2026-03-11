@@ -104,6 +104,29 @@ impl WidgetMatchEvent for ChatsDeck {
             match action.cast() {
                 ChatAction::Start(bot_id) => {
                     let chat_id = store.chats.create_empty_chat(Some(bot_id.clone()));
+
+                    // Pre-populate BotFather welcome or error message
+                    #[cfg(not(target_arch = "wasm32"))]
+                    if bot_id.as_str() == "botfather" {
+                        if let Some(chat) = store.chats.get_chat_by_id(chat_id) {
+                            let content = if store.bot_server_state.is_some() {
+                                crate::bot_manager::BotFatherClient::welcome_message()
+                            } else {
+                                MessageContent {
+                                    text: "BotFather server is not running. \
+                                           Please restart the application."
+                                        .to_string(),
+                                    ..Default::default()
+                                }
+                            };
+                            chat.borrow_mut().messages.push(Message {
+                                from: EntityId::Bot(bot_id.clone()),
+                                content,
+                                ..Default::default()
+                            });
+                        }
+                    }
+
                     let chat = store.chats.get_chat_by_id(chat_id);
                     if let Some(chat) = chat {
                         self.create_or_update_chat_view(cx, &chat.borrow());
