@@ -107,7 +107,7 @@ impl WidgetMatchEvent for ChatsDeck {
 
                     // Pre-populate BotFather welcome or error message
                     #[cfg(not(target_arch = "wasm32"))]
-                    if bot_id.as_str() == "botfather" {
+                    if bot_id.as_str().ends_with("/botfather") {
                         if let Some(chat) = store.chats.get_chat_by_id(chat_id) {
                             let content = if store.bot_server_state.is_some() {
                                 crate::bot_manager::BotFatherClient::welcome_message()

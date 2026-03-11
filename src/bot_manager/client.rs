@@ -47,32 +47,10 @@ impl BotFatherClient {
 impl BotFatherClient {
     /// Returns the welcome message content with quick reply buttons.
     ///
-    /// The text body comes from [`super::dialog::WELCOME_TEXT`] — the single
-    /// source of truth for BotFather's greeting.
+    /// Delegates to [`super::dialog::welcome_message`] — the single source
+    /// of truth for BotFather's greeting content and buttons.
     pub fn welcome_message() -> MessageContent {
-        use moly_kit::aitk::protocol::{ButtonStyle, QuickReplyButton};
-
-        MessageContent {
-            text: super::dialog::welcome_text(),
-            quick_replies: vec![
-                QuickReplyButton {
-                    label: "Create a Bot".to_string(),
-                    action: "/newbot".to_string(),
-                    style: ButtonStyle::Primary,
-                },
-                QuickReplyButton {
-                    label: "My Bots".to_string(),
-                    action: "/mybots".to_string(),
-                    style: ButtonStyle::Secondary,
-                },
-                QuickReplyButton {
-                    label: "Help".to_string(),
-                    action: "/help".to_string(),
-                    style: ButtonStyle::Subtle,
-                },
-            ],
-            ..Default::default()
-        }
+        super::dialog::welcome_message()
     }
 }
 
@@ -141,11 +119,7 @@ impl BotClient for BotFatherClient {
                 }
             };
 
-            let content = MessageContent {
-                text: response,
-                ..Default::default()
-            };
-            yield ClientResult::new_ok(content);
+            yield ClientResult::new_ok(response);
         };
 
         Box::pin(stream)
@@ -160,13 +134,9 @@ mod tests {
     fn test_botfather_welcome_message() {
         let content = BotFatherClient::welcome_message();
         assert!(content.text.contains("Welcome to BotFather"));
-        assert_eq!(content.quick_replies.len(), 3);
-        assert_eq!(content.quick_replies[0].label, "Create a Bot");
-        assert_eq!(content.quick_replies[0].action, "/newbot");
-        assert_eq!(content.quick_replies[1].label, "My Bots");
-        assert_eq!(content.quick_replies[1].action, "/mybots");
-        assert_eq!(content.quick_replies[2].label, "Help");
-        assert_eq!(content.quick_replies[2].action, "/help");
+        assert!(content.text.contains("/newbot"));
+        assert!(content.text.contains("/mybots"));
+        assert!(content.quick_replies.is_empty());
     }
 }
 
