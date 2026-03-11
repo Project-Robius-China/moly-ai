@@ -134,13 +134,9 @@ mod tests {
     fn test_botfather_welcome_message() {
         let content = BotFatherClient::welcome_message();
         assert!(content.text.contains("Welcome to BotFather"));
-        assert_eq!(content.quick_replies.len(), 3);
-        assert_eq!(content.quick_replies[0].label, "Create a Bot");
-        assert_eq!(content.quick_replies[0].action, "/newbot");
-        assert_eq!(content.quick_replies[1].label, "My Bots");
-        assert_eq!(content.quick_replies[1].action, "/mybots");
-        assert_eq!(content.quick_replies[2].label, "Help");
-        assert_eq!(content.quick_replies[2].action, "/help");
+        assert!(content.text.contains("/newbot"));
+        assert!(content.text.contains("/mybots"));
+        assert!(content.quick_replies.is_empty());
     }
 }
 

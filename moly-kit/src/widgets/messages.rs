@@ -759,13 +759,14 @@ impl Messages {
 
         // Handle code copy
         // Since the Markdown widget could have multiple code blocks, we need the widget that triggered the action
-        if let Some(wa) = event.actions().widget_action(ids!(copy_code_button))
-            && wa.widget().as_button().pressed(event.actions()) {
-                // nth(2) refers to the code view in the MessageMarkdown widget
-                let code_view = wa.widget_nth(2).widget(ids!(code_view));
-                let text_to_copy = code_view.as_code_view().text();
+        if let Some(wa) = event.actions().widget_action(ids!(copy_code_button)) {
+            if let Some(text_to_copy) = wa.widgets.iter().find_map(|widget| {
+                let code_view = widget.widget(ids!(code_view));
+                (!code_view.is_empty()).then(|| code_view.as_code_view().text())
+            }) {
                 cx.copy_to_clipboard(&text_to_copy);
             }
+        }
     }
 
     fn apply_editor_visibility(&mut self, cx: &mut Cx, widget: &WidgetRef, index: usize) {
@@ -788,6 +789,18 @@ impl Messages {
 
     pub fn register_custom_content<T: CustomContent + 'static>(&mut self, widget: T) {
         self.custom_contents.push(Box::new(widget));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_code_copy_uses_ancestor_lookup_instead_of_fixed_index() {
+        let source = include_str!("messages.rs");
+        let implementation = source.split("#[cfg(test)]").next().unwrap_or(source);
+        assert!(implementation.contains("widget_action(ids!(copy_code_button))"));
+        assert!(!implementation.contains(".pressed(event.actions())"));
+        assert!(!implementation.contains("widget_nth(2)"));
     }
 }
 

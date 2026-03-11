@@ -1,6 +1,5 @@
 //! Dialog state machine and command handling for BotFather.
 
-use moly_kit::aitk::protocol::{ButtonStyle, QuickReplyButton};
 use moly_kit::aitk::telegram_server::{BotInfo, BotStore, BotUpdate};
 use moly_kit::prelude::MessageContent;
 
@@ -8,11 +7,11 @@ use moly_kit::prelude::MessageContent;
 /// place that lists BotFather commands (welcome message, `/start`, `/help`,
 /// and the settings panel).
 pub const COMMAND_LIST: &str = "\
-/newbot  — Create a new bot\n\
-/mybots  — Manage your bots\n\
-/start   — Show welcome message\n\
-/help    — Show help\n\
-/cancel  — Cancel current operation";
+- `/newbot` — Create a new bot\n\
+- `/mybots` — Manage your bots\n\
+- `/start` — Show welcome message\n\
+- `/help` — Show help\n\
+- `/cancel` — Cancel current operation";
 
 /// Build the canonical welcome text from [`COMMAND_LIST`].
 pub fn welcome_text() -> String {
@@ -119,11 +118,17 @@ fn try_command(
             Some(cmd_mybots(store))
         }
         "/cancel" => {
+            let was_idle =
+                matches!(state, DialogState::Idle);
             *state = DialogState::Idle;
-            Some(plain(
-                "Operation cancelled. Send /start to see available commands."
-                    .to_string(),
-            ))
+            let text = if was_idle {
+                "No active operation to cancel. \
+                 Send /start to see available commands."
+            } else {
+                "Operation cancelled. \
+                 Send /start to see available commands."
+            };
+            Some(plain(text.to_string()))
         }
         _ => {
             *state = DialogState::Idle;
@@ -135,7 +140,7 @@ fn try_command(
     }
 }
 
-/// Returns the welcome message with quick reply buttons.
+/// Returns the welcome message.
 ///
 /// Used both as the `/start` response and the initial chat greeting.
 pub(crate) fn welcome_message() -> MessageContent {
@@ -143,72 +148,33 @@ pub(crate) fn welcome_message() -> MessageContent {
 }
 
 fn cmd_start() -> MessageContent {
-    MessageContent {
-        text: welcome_text(),
-        quick_replies: vec![
-            QuickReplyButton {
-                label: "Create a Bot".to_string(),
-                action: "/newbot".to_string(),
-                style: ButtonStyle::Primary,
-            },
-            QuickReplyButton {
-                label: "My Bots".to_string(),
-                action: "/mybots".to_string(),
-                style: ButtonStyle::Secondary,
-            },
-            QuickReplyButton {
-                label: "Help".to_string(),
-                action: "/help".to_string(),
-                style: ButtonStyle::Subtle,
-            },
-        ],
-        ..Default::default()
-    }
+    plain(welcome_text())
 }
 
 fn cmd_mybots(store: &BotStore) -> MessageContent {
     match store.list_bots() {
-        Ok(bots) if bots.is_empty() => MessageContent {
-            text: "You haven't created any bots yet.\n\n\
-                   Use /newbot to create your first bot!"
+        Ok(bots) if bots.is_empty() => plain(
+            "You haven't created any bots yet.\n\n\
+             Use /newbot to create your first bot!"
                 .to_string(),
-            quick_replies: vec![QuickReplyButton {
-                label: "Create a Bot".to_string(),
-                action: "/newbot".to_string(),
-                style: ButtonStyle::Primary,
-            }],
-            ..Default::default()
-        },
+        ),
         Ok(bots) => {
             let mut msg = format!(
-                "Your bots ({} total):\n\n",
+                "**Your bots** ({} total)\n\n",
                 bots.len()
             );
             for (i, bot) in bots.iter().enumerate() {
                 msg.push_str(&format!(
-                    "{}. {} (@{})\n",
+                    "{}. **{}** — @{}\n",
                     i + 1,
                     bot.name,
                     bot.username
                 ));
             }
-            msg.push_str("\nTap a bot to manage it.");
-
-            let quick_replies = bots
-                .iter()
-                .enumerate()
-                .map(|(i, bot)| QuickReplyButton {
-                    label: format!("@{}", bot.username),
-                    action: format!("{}", i + 1),
-                    style: ButtonStyle::Secondary,
-                })
-                .collect();
-
-            MessageContent {
-                text: msg,
-                quick_replies,
-                ..Default::default()
-            }
+            msg.push_str(
+                "\nEnter a number or @username to manage a bot.",
+            );
+            plain(msg)
         }
         Err(e) => plain(format!("Failed to list bots: {e}")),
     }
@@ -228,9 +194,11 @@ fn handle_awaiting_bot_name(state: &mut DialogState, name: &str) -> String {
     *state = DialogState::AwaitingUsername {
         name: name.to_string(),
     };
-    "Good. Now please choose a username for your bot.\n\n\
-     It must end with 'bot' or '_bot' \
-     (only lowercase letters, digits, and underscores, 3-32 chars):"
+    "Good. Now please choose a **username** for your bot.\n\n\
+     Requirements:\n\
+     - 3–32 characters\n\
+     - Lowercase letters, digits, and underscores only\n\
+     - Must end with `bot` or `_bot`"
         .to_string()
 }
 
@@ -295,24 +263,16 @@ fn validate_username(username: &str) -> Result<(), String> {
 }
 
 fn format_bot_created(bot: &BotInfo, server_port: u16) -> MessageContent {
-    MessageContent {
-        text: format!(
-            "Done! Your new bot \"{name}\" (@{username}) is ready.\n\n\
-             Token: `{token}`\n\n\
-             To connect with crew-rs:\n\
-             1. Set API URL to: http://localhost:{server_port}\n\
-             2. Paste the token above into your crew-rs config",
-            name = bot.name,
-            username = bot.username,
-            token = bot.token,
-        ),
-        quick_replies: vec![QuickReplyButton {
-            label: "My Bots".to_string(),
-            action: "/mybots".to_string(),
-            style: ButtonStyle::Secondary,
-        }],
-        ..Default::default()
-    }
+    plain(format!(
+        "**Done!** Your new bot **{name}** (@{username}) is ready.\n\n\
+         **Token:**\n```\n{token}\n```\n\n\
+         **Connect with crew-rs:**\n\
+         1. Set API URL to `http://localhost:{server_port}`\n\
+         2. Paste the token above into your crew-rs config",
+        name = bot.name,
+        username = bot.username,
+        token = bot.token,
+    ))
 }
 
 fn handle_managing_bot_input(
@@ -335,9 +295,8 @@ fn handle_managing_bot_input(
             *state = DialogState::ConfirmingDelete {
                 token: token.to_string(),
             };
-            "Are you sure you want to delete this bot? \
-             This cannot be undone.\n\n\
-             Type \"confirm delete\" to confirm, or /cancel to cancel."
+            "**Are you sure?** This cannot be undone.\n\n\
+             Type `confirm delete` to proceed, or /cancel to cancel."
                 .to_string()
         }
         "5" => {
@@ -358,10 +317,10 @@ fn show_token(
         Ok(Some(bot)) => {
             *state = DialogState::Idle;
             format!(
-                "Bot \"{name}\" (@{username}) token:\n\n\
-                 `{token}`\n\n\
-                 To use with crew-rs:\n\
-                 1. Set API URL to: http://localhost:{server_port}\n\
+                "**{name}** (@{username})\n\n\
+                 **Token:**\n```\n{token}\n```\n\n\
+                 **Connect with crew-rs:**\n\
+                 1. Set API URL to `http://localhost:{server_port}`\n\
                  2. Paste the token above into your crew-rs config",
                 name = bot.name,
                 username = bot.username,
@@ -385,10 +344,11 @@ fn revoke_token(
         Ok(new_token) => {
             *state = DialogState::Idle;
             format!(
-                "Token has been revoked. New token:\n\n\
+                "**Token revoked.** New token:\n\n\
                  `{new_token}`\n\n\
-                 Please update the token in your crew-rs config.\n\
-                 API URL: http://localhost:{server_port}"
+                 **Update your crew-rs config:**\n\
+                 - API URL: `http://localhost:{server_port}`\n\
+                 - Replace the old token with the one above"
             )
         }
         Err(e) => {
@@ -417,7 +377,7 @@ fn handle_awaiting_new_name(
         Ok(bot) => {
             *state = DialogState::Idle;
             format!(
-                "Name updated to \"{}\" (@{}).",
+                "**Name updated** to **{}** (@{}).",
                 bot.name, bot.username
             )
         }
@@ -438,7 +398,7 @@ fn handle_confirming_delete(
         match store.delete_bot(token) {
             Ok(()) => {
                 *state = DialogState::Idle;
-                "Bot has been deleted.".to_string()
+                "**Bot deleted.**".to_string()
             }
             Err(e) => {
                 *state = DialogState::Idle;
@@ -498,7 +458,7 @@ fn enter_management_menu(state: &mut DialogState, bot: &BotInfo) -> String {
         token: bot.token.clone(),
     };
     format!(
-        "Managing bot \"{}\" (@{}):\n\n\
+        "**Managing** **{}** (@{})\n\n\
          1. View Token\n\
          2. Edit Name\n\
          3. Revoke Token\n\
@@ -533,14 +493,11 @@ mod tests {
     }
 
     #[test]
-    fn test_start_returns_quick_replies() {
+    fn test_start_has_no_quick_replies() {
         let store = test_store();
         let mut state = DialogState::default();
         let r = process_input(&mut state, "/start", &store, 8488);
-        assert_eq!(r.quick_replies.len(), 3);
-        assert_eq!(r.quick_replies[0].action, "/newbot");
-        assert_eq!(r.quick_replies[1].action, "/mybots");
-        assert_eq!(r.quick_replies[2].action, "/help");
+        assert!(r.quick_replies.is_empty());
     }
 
     #[test]
@@ -566,7 +523,7 @@ mod tests {
     }
 
     #[test]
-    fn test_newbot_token_in_backticks() {
+    fn test_newbot_token_in_code_block() {
         let store = test_store();
         let mut state = DialogState::default();
         let _ = process_input(&mut state, "/newbot", &store, 8488);
@@ -574,9 +531,8 @@ mod tests {
         let r = process_input(&mut state, "demo_bot", &store, 8488);
 
         let bot = store.list_bots().unwrap().pop().unwrap();
-        assert!(r.text.contains(&format!("`{}`", bot.token)));
-        assert_eq!(r.quick_replies.len(), 1);
-        assert_eq!(r.quick_replies[0].action, "/mybots");
+        assert!(r.text.contains(&format!("```\n{}\n```", bot.token)));
+        assert!(r.quick_replies.is_empty());
     }
 
     #[test]
@@ -616,30 +572,28 @@ mod tests {
     }
 
     #[test]
-    fn test_mybots_returns_quick_replies() {
+    fn test_mybots_lists_bots() {
         let store = test_store();
         store.create_bot("Alpha", "alpha_bot").unwrap();
         store.create_bot("Beta", "beta_bot").unwrap();
 
         let mut state = DialogState::default();
         let r = process_input(&mut state, "/mybots", &store, 8488);
-        assert!(r.text.contains("Your bots (2 total)"));
-        assert_eq!(r.quick_replies.len(), 2);
-        assert_eq!(r.quick_replies[0].label, "@alpha_bot");
-        assert_eq!(r.quick_replies[0].action, "1");
-        assert_eq!(r.quick_replies[1].label, "@beta_bot");
-        assert_eq!(r.quick_replies[1].action, "2");
+        assert!(r.text.contains("Your bots** (2 total)"));
+        assert!(r.text.contains("1. **Alpha**"));
+        assert!(r.text.contains("2. **Beta**"));
+        assert!(r.text.contains("Enter a number"));
+        assert!(r.quick_replies.is_empty());
     }
 
     #[test]
-    fn test_mybots_empty_returns_newbot_button() {
+    fn test_mybots_empty() {
         let store = test_store();
         let mut state = DialogState::default();
         let r = process_input(&mut state, "/mybots", &store, 8488);
         assert!(r.text.contains("haven't created any bots"));
-        assert_eq!(r.quick_replies.len(), 1);
-        assert_eq!(r.quick_replies[0].label, "Create a Bot");
-        assert_eq!(r.quick_replies[0].action, "/newbot");
+        assert!(r.text.contains("/newbot"));
+        assert!(r.quick_replies.is_empty());
     }
 
     #[test]
@@ -651,7 +605,7 @@ mod tests {
             token: bot.token.clone(),
         };
         let r = process_input(&mut state, "1", &store, 8488);
-        assert!(r.text.contains(&bot.token));
+        assert!(r.text.contains(&format!("```\n{}\n```", bot.token)));
         assert!(r.text.contains("crew-rs"));
     }
 
@@ -716,6 +670,14 @@ mod tests {
         let mut state = DialogState::default();
         let r = process_input(&mut state, "some random text", &store, 8488);
         assert!(r.text.contains("/start"));
+    }
+
+    #[test]
+    fn test_process_input_returns_message_content() {
+        let store = test_store();
+        let mut state = DialogState::default();
+        let r = process_input(&mut state, "/cancel", &store, 8488);
+        assert!(r.text.contains("No active operation"));
     }
 
     #[test]
