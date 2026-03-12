@@ -15,7 +15,10 @@ This spec documents the complete implementation status across AITK (library)
 and Moly (app), combining deep research on real Telegram Bot API with what
 is currently built, what remains, and what is out of scope.
 
-### Layer Diagram
+
+### Architecture
+
+#### Layer Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -57,7 +60,7 @@ is currently built, what remains, and what is out of scope.
 └─────────────────────────────────────────────────────────┘
 ```
 
-### Message Flow
+#### Message Flow
 
 1. User sends a message in Moly UI
 2. Moly constructs a Telegram `Update` JSON and calls `ServerState::push_update()`
@@ -67,7 +70,10 @@ is currently built, what remains, and what is out of scope.
 6. AITK pushes an `OutboundEvent` through the unbounded channel
 7. Moly app receives the event and displays it in the chat UI
 
-### Bot API Endpoints Status
+
+### Implementation Status
+
+#### Bot API Endpoints (11 routes: 7 functional, 4 stubs)
 
 | Endpoint             | Method   | Status        | Notes                                           |
 |----------------------|----------|---------------|-------------------------------------------------|
@@ -82,36 +88,37 @@ is currently built, what remains, and what is out of scope.
 | `deleteWebhook`      | POST     | Stub          | No-op, returns true (teloxide startup compatibility) |
 | `setMyCommands`      | POST     | Stub          | Accepts and discards commands (not persisted)   |
 | `getMyCommands`      | GET/POST | Stub          | Always returns empty list                       |
-| `sendPhoto`          | -        | Not implemented | Type definitions exist (PhotoSize)             |
-| `sendVoice`          | -        | Not implemented | Type definitions exist (Voice)                 |
-| `sendAudio`          | -        | Not implemented | Type definitions exist (Audio)                 |
-| `sendDocument`       | -        | Not implemented | Type definitions exist (Document)              |
-| `sendChatAction`     | -        | Not implemented | Typing indicator                               |
-| `getChat`            | -        | Not implemented |                                                 |
+| `sendPhoto`          | -        | Not impl      | Type definitions exist (PhotoSize)              |
+| `sendVoice`          | -        | Not impl      | Type definitions exist (Voice)                  |
+| `sendAudio`          | -        | Not impl      | Type definitions exist (Audio)                  |
+| `sendDocument`       | -        | Not impl      | Type definitions exist (Document)               |
+| `sendChatAction`     | -        | Not impl      | Typing indicator                                |
+| `getChat`            | -        | Not impl      |                                                  |
 | `setWebhook`         | -        | Out of scope  | Long-polling only design                        |
 
-### BotFather Commands Status
+#### BotFather Commands (5 direct + management menu)
 
-| Command   | Status      | Description                                        |
-|-----------|-------------|----------------------------------------------------|
-| `/start`  | Implemented | Show welcome message with command list              |
-| `/help`   | Implemented | Same as /start                                      |
-| `/newbot`  | Implemented | 2-step wizard: name → username → token              |
-| `/mybots`  | Implemented | List all bots with numbered selection               |
-| `/cancel`  | Implemented | Cancel active operation, context-aware messaging    |
-| `/setname` | Implemented | Via management menu option 2 (Edit Name)            |
-| `/token`   | Implemented | Via management menu option 1 (View Token)           |
-| `/deletebot`| Implemented | Via management menu option 4 (requires `confirm delete`) |
-| `/revoke`  | Implemented | Via management menu option 3 (Revoke Token)         |
-| `/setdescription` | Not implemented | BotUpdate.description field exists in store |
-| `/setabouttext`   | Not implemented | BotUpdate.about_text field exists in store  |
-| `/setuserpic`     | Not implemented | BotUpdate.photo_path field exists in store  |
-| `/setcommands`    | Not implemented | setMyCommands endpoint is a stub            |
-| `/setjoingroups`  | Not applicable  | No group chat support                       |
-| `/setprivacy`     | Not applicable  | No group chat support                       |
-| `/setinline`      | Not applicable  | No inline mode                              |
+| Command              | Status         | Description                                     |
+|----------------------|----------------|-------------------------------------------------|
+| `/start`             | Implemented    | Show welcome message with command list           |
+| `/help`              | Implemented    | Same as /start                                   |
+| `/newbot`            | Implemented    | 2-step wizard: name → username → token           |
+| `/mybots`            | Implemented    | List all bots with numbered selection            |
+| `/cancel`            | Implemented    | Cancel active operation, context-aware messaging |
+| View Token           | Implemented    | Management menu option 1                         |
+| Edit Name            | Implemented    | Management menu option 2                         |
+| Revoke Token         | Implemented    | Management menu option 3                         |
+| Delete Bot           | Implemented    | Management menu option 4, requires "confirm delete" |
+| Back                 | Implemented    | Management menu option 5                         |
+| `/setdescription`    | Not impl       | BotUpdate.description field exists in store      |
+| `/setabouttext`      | Not impl       | BotUpdate.about_text field exists in store       |
+| `/setuserpic`        | Not impl       | BotUpdate.photo_path field exists in store       |
+| `/setcommands`       | Not impl       | setMyCommands endpoint is a stub                 |
+| `/setjoingroups`     | N/A            | No group chat support                            |
+| `/setprivacy`        | N/A            | No group chat support                            |
+| `/setinline`         | N/A            | No inline mode                                   |
 
-### Dialog State Machine
+#### Dialog State Machine
 
 ```
 Idle ──/newbot──→ AwaitingBotName ──name──→ AwaitingUsername ──valid──→ Idle (bot created)
@@ -130,51 +137,86 @@ Any state ──/cancel──→ Idle
 Any state ──/command──→ (command handler, resets state)
 ```
 
-### SQLite Schema (4 tables)
+#### Data Types Implemented
 
-**bots** — Bot metadata (id, token, name, username, description, about_text, photo_path, timestamps)
-**updates** — Pending updates for long-polling (id=update_id, bot_id, payload JSON)
-**messages** — Message history (bot_id, message_id, chat_id, is_from_bot, content, media fields, reply_markup JSON)
-**media** — File metadata for getFile (file_id, file_unique_id, file_path, mime_type, file_size)
+**Telegram-compatible response/entity types:**
+ApiResponse, User, Chat, Message, Update, CallbackQuery, InlineKeyboardMarkup,
+InlineKeyboardButton, PhotoSize, Voice, Audio, Document, File, WebhookInfo,
+BotCommand.
 
-Indexes: `idx_updates_bot(bot_id)`, `idx_messages_bot_chat(bot_id, chat_id)`, `idx_messages_timestamp(timestamp)`
+**Request body types:**
+GetUpdatesRequest, SendMessageRequest, EditMessageTextRequest,
+DeleteMessageRequest, AnswerCallbackQueryRequest, GetFileRequest,
+SetMyCommandsRequest.
 
-### Data Types Implemented
+**App-layer types:**
+BotInfo, BotUpdate, OutboundEvent (SendMessage, EditMessage, DeleteMessage).
 
-Telegram-compatible: ApiResponse, User, Chat, Message, Update, CallbackQuery,
-InlineKeyboardMarkup, InlineKeyboardButton, PhotoSize, Voice, Audio, Document,
-File, WebhookInfo, BotCommand, OutboundEvent (SendMessage, EditMessage, DeleteMessage).
+**Not implemented:**
+ReplyKeyboardMarkup, ForceReply, ReplyKeyboardRemove.
 
-Not implemented: ReplyKeyboardMarkup, ForceReply, ReplyKeyboardRemove.
+#### SQLite Schema (4 tables + version tracking)
 
-### Real Telegram vs Moly
+**bots** — Bot metadata
+- id (INTEGER PK), token (TEXT UNIQUE), name, username (TEXT UNIQUE),
+  description, about_text, photo_path, created_at, updated_at
 
-| Aspect                  | Real Telegram                              | Moly                                   |
-|-------------------------|--------------------------------------------|----------------------------------------|
-| Server                  | api.telegram.org (cloud)                   | localhost:{port} (local)               |
-| Token format            | `{bot_id}:{alphanumeric}`                  | `{bot_id}:{uuid_hex_32}`              |
-| Updates                 | Long-polling or Webhooks                   | Long-polling only                      |
-| Chat types              | Private, group, supergroup, channel        | Private only (single-user)             |
-| Inline keyboards        | Full callback support                      | Types exist, answerCallbackQuery stubs |
-| Reply keyboards         | Full support                               | Not implemented                        |
-| Media                   | Full upload/download                       | Type definitions only                  |
-| Rate limiting           | 30 msg/sec, etc.                           | None                                   |
-| TLS                     | Required (HTTPS)                           | Not needed (localhost)                 |
+**updates** — Pending updates for long-polling
+- id (INTEGER PK = update_id), bot_id (FK → bots), payload (JSON TEXT),
+  created_at
+- Index: `idx_updates_bot(bot_id)`
 
-### Roadmap
+**messages** — Message history
+- id (INTEGER PK), bot_id (FK → bots), message_id, chat_id, is_from_bot,
+  content, media_type, media_path, caption, reply_markup (JSON TEXT),
+  timestamp
+- Constraint: UNIQUE(bot_id, message_id)
+- Indexes: `idx_messages_bot_chat(bot_id, chat_id)`,
+  `idx_messages_timestamp(timestamp)`
 
-**Implemented:**
-Core Bot API server (11 routes), BotFather dialog (full lifecycle), SQLite persistence,
-long-polling with single-poller enforcement, outbound event channel, provider registration,
-markdown-formatted responses, text + number interaction, context-aware /cancel.
+**media** — File metadata for getFile
+- id (INTEGER PK), file_id (TEXT UNIQUE), file_unique_id, file_path,
+  mime_type, file_size
 
-**In Progress:**
-Outbound event routing to chat UI (currently logging only), bot chat view integration.
+**schema_version** — Internal migration tracking
+- version (INTEGER)
 
-**Planned:**
-Media endpoints (sendPhoto, sendVoice, sendAudio, sendDocument), file download serving,
-sendChatAction, /setdescription, /setabouttext, bot avatars, token copy-to-clipboard,
-online/offline indicators, InlineKeyboardMarkup rendering.
+#### BotStore API Surface
+
+| Method                     | Returns                   | Description                            |
+|----------------------------|---------------------------|----------------------------------------|
+| `open(config)`             | `Result<Self>`            | Open/create DB, run migrations         |
+| `create_bot(name, user)`   | `Result<BotInfo>`         | Create bot, generate token             |
+| `get_bot_by_token(token)`  | `Result<Option<BotInfo>>` | Look up bot by API token               |
+| `list_bots()`              | `Result<Vec<BotInfo>>`    | All bots ordered by created_at ASC     |
+| `update_bot(token, upd)`   | `Result<BotInfo>`         | Selective field update                 |
+| `delete_bot(token)`        | `Result<()>`              | Cascade delete (messages, updates)     |
+| `revoke_token(old_token)`  | `Result<String>`          | Generate new token, return it          |
+| `insert_update(bot_id, j)` | `Result<i64>`             | Store update JSON, return update_id    |
+| `get_updates(bot_id, o, l)`| `Result<Vec<(i64, Str)>>` | Get updates with offset, limit         |
+| `store_message(...)`       | `Result<i64>`             | Store message, auto-increment msg_id   |
+| `media_dir()`              | `&str`                    | Configured media directory path        |
+| `store_media(...)`         | `Result<()>`              | Insert or replace file metadata        |
+| `get_media(file_id)`       | `Result<Option<(S, O<S>)>>`| Get (file_path, mime_type)           |
+
+Configuration: `BotStoreConfig { db_path: String, media_dir: String }`
+Thread safety: `Mutex<Connection>` wrapping, supports `:memory:` for tests.
+
+#### Error Handling (BotApiError)
+
+| Variant          | HTTP Code | Description                                  |
+|------------------|-----------|----------------------------------------------|
+| `InvalidToken`   | 401       | Token doesn't match any registered bot       |
+| `BotNotFound`    | 404       | Bot ID not found in store                    |
+| `InvalidRequest` | 400       | Malformed request or constraint violation    |
+| `ConflictPoller` | 409       | Another getUpdates long-poller already active|
+| `QueueFull`      | 429       | Update queue at capacity limit               |
+| `DatabaseError`  | 500       | SQLite operation failed                      |
+| `InternalError`  | 500       | Other unexpected failure                     |
+
+Implements `Display`, `std::error::Error`, and `From<rusqlite::Error>`.
+Error responses use standard Telegram format:
+`{"ok": false, "error_code": N, "description": "..."}`.
 
 
 ## Decisions
@@ -187,18 +229,19 @@ online/offline indicators, InlineKeyboardMarkup rendering.
 - User model: single-user (user_id always 1, private chat only)
 - Default port: 8488 (configurable via `bot_server_port` preference)
 - Platform gating: all server code behind `#[cfg(not(target_arch = "wasm32"))]`
-- BotFather interaction: pure text + numbered menus (no quick-reply buttons)
+- BotFather interaction: text + numbered menus; MessageContent supports quick_replies
 - Outbound events: `futures::channel::mpsc::unbounded` channel from AITK to app
-- Username rules: 3-32 chars, lowercase ASCII + digits + underscores, must end with `bot` or `_bot`
-- Error responses: standard Telegram format `{"ok": false, "error_code": N, "description": "..."}`
-- BotStore API: all methods synchronized via `Mutex<Connection>`, in-memory mode for tests
+- Username rules: 3-32 chars, lowercase ASCII + digits + underscores, ends with `bot` or `_bot`
+- BotStore API: all methods synchronized via `Mutex<Connection>`, `:memory:` for tests
+- Server binding: localhost only (127.0.0.1), graceful shutdown via oneshot channel
+- Long-polling constraints: max timeout 60s, max limit 100, one poller per bot
 
 
 ## Boundaries
 
 ### Allowed Changes
 
-#### AITK (Library Layer)
+**AITK (Library Layer)**
 - `aitk/src/telegram_server/server.rs` — ServerState, ServerConfig, ServerHandle
 - `aitk/src/telegram_server/api/mod.rs` — Router with 11 endpoint routes
 - `aitk/src/telegram_server/api/handlers.rs` — HTTP handler implementations
@@ -208,7 +251,7 @@ online/offline indicators, InlineKeyboardMarkup rendering.
 - `aitk/src/telegram_server/error.rs` — BotApiError enum (7 variants)
 - `aitk/src/telegram_server/schema.sql` — SQLite schema
 
-#### Moly App
+**Moly App**
 - `src/bot_manager/dialog.rs` — DialogState state machine, COMMAND_LIST
 - `src/bot_manager/client.rs` — BotFatherClient (BotClient trait impl)
 - `src/data/store.rs` — Server startup, outbound event loop, provider registration
@@ -221,28 +264,116 @@ online/offline indicators, InlineKeyboardMarkup rendering.
 - Do not implement group chat or multi-user support
 - Do not implement Payments, Stickers, Games, or Web Apps API
 
-### Error Handling
 
-| Variant          | HTTP Code | Description                                  |
-|------------------|-----------|----------------------------------------------|
-| `InvalidToken`   | 401       | Token doesn't match any registered bot       |
-| `BotNotFound`    | 404       | Bot ID not found in store                    |
-| `InvalidRequest` | 400       | Malformed request or constraint violation    |
-| `ConflictPoller` | 409       | Another getUpdates long-poller already active|
-| `QueueFull`      | 429       | Update queue at capacity limit               |
-| `DatabaseError`  | 500       | SQLite operation failed                      |
-| `InternalError`  | 500       | Other unexpected failure                     |
+## Constraints
+
+### Telegram Bot API Reference
+
+#### Long Polling vs Webhooks
+
+Real Telegram supports both long polling (`getUpdates`) and webhooks
+(`setWebhook`). Moly implements long polling only — webhooks are unnecessary
+for localhost communication. The `getWebhookInfo` and `deleteWebhook`
+endpoints exist as no-op stubs for teloxide startup compatibility (teloxide
+calls these on boot to ensure clean state).
+
+#### Keyboard Types
+
+Real Telegram has two distinct keyboard types:
+
+- **InlineKeyboardMarkup** — buttons attached below a specific message,
+  trigger `callback_query` updates. Moly: types fully implemented,
+  `answerCallbackQuery` returns true but discards text/alert parameters.
+- **ReplyKeyboardMarkup** — persistent keyboard replacing the device
+  keyboard, sends text messages. Moly: not implemented (out of scope).
+
+#### Bot Management (BotFather Comparison)
+
+Real Telegram's @BotFather offers ~20 commands for bot configuration. Moly
+implements the core lifecycle (create, list, rename, view/revoke token,
+delete). Commands like `/setdescription`, `/setabouttext`, and `/setuserpic`
+have storage fields prepared but no dialog handlers yet.
+
+#### Key Differences from Real Telegram
+
+| Aspect                  | Real Telegram                        | Moly                               |
+|-------------------------|--------------------------------------|-------------------------------------|
+| Server                  | api.telegram.org (cloud)             | localhost:{port} (local)            |
+| Token format            | `{bot_id}:{alphanumeric}`            | `{bot_id}:{uuid_hex_32}`           |
+| Updates                 | Long-polling or Webhooks             | Long-polling only                   |
+| Chat types              | Private, group, supergroup, channel  | Private only (single-user)          |
+| Inline keyboards        | Full callback + URL + web app        | Callback data only                  |
+| Reply keyboards         | Full support                         | Not implemented                     |
+| Media                   | Full upload/download with CDN        | Type definitions only               |
+| Rate limiting           | 30 msg/sec, etc.                     | None                                |
+| TLS                     | Required (HTTPS)                     | Not needed (localhost)              |
+| Bot discovery           | @BotFather, t.me/botname             | In-app only                         |
+| User identity           | Real Telegram user IDs               | Always user_id=1                    |
 
 
-## Out of Scope
+### Testing
 
+#### Test Locations
+
+**AITK — telegram_server module:**
+
+| File                   | Tests                                        |
+|------------------------|----------------------------------------------|
+| `api/mod.rs`           | test_get_me_returns_bot_info, test_invalid_token_returns_401 |
+| `store.rs`             | test_create_and_get_bot, test_duplicate_username_rejected, test_list_bots, test_update_bot, test_delete_bot_cascades, test_revoke_token, test_update_id_global_increment, test_get_updates_with_offset, test_store_message_auto_increment, test_store_and_get_media |
+| `queue.rs`             | test_register_and_unregister_poller, test_notify_without_poller_is_noop, test_is_bot_online |
+| `types.rs`             | test_api_response_ok_serialization, test_api_response_error_serialization, test_update_with_message_roundtrip, test_callback_query_deserialization, test_inline_keyboard_roundtrip, test_parse_chat_id_number, test_parse_chat_id_string |
+
+**Moly — bot_manager module:**
+
+| File                   | Tests                                        |
+|------------------------|----------------------------------------------|
+| `dialog.rs`            | test_botfather_start_command, test_start_has_no_quick_replies, test_botfather_newbot_flow, test_newbot_token_in_code_block, test_botfather_newbot_invalid_username, test_botfather_newbot_duplicate_username, test_mybots_lists_bots, test_mybots_empty, test_botfather_token_command, test_botfather_revoke_token, test_botfather_setname, test_botfather_deletebot_confirms, test_botfather_unknown_command, test_process_input_returns_message_content, test_resolve_bot_selection_returns_message_content, test_username_validation |
+| `client.rs`            | test_botfather_welcome_message                |
+
+#### Test Commands
+
+AITK tests (run from aitk repo root):
+`cargo test -p aitk --lib telegram_server`
+
+Moly tests (run from moly-ai repo root):
+`cargo test -p moly --lib bot_manager`
+
+
+### Roadmap
+
+#### Implemented
+- Core Bot API server (11 routes: 7 functional, 4 teloxide-compatibility stubs)
+- BotFather dialog (full lifecycle: create, list, rename, view/revoke token, delete)
+- SQLite persistence (4 tables with indexes and cascade delete)
+- Long-polling with single-poller enforcement (409 ConflictPoller)
+- Outbound event channel (SendMessage, EditMessage, DeleteMessage)
+- Provider registration (BotFather auto-registered on startup)
+- Dialog state machine (6 states, context-aware /cancel)
+- Username validation (3-32 chars, lowercase, must end with bot/_bot)
+- MessageContent return type with quick_replies support
+
+#### In Progress
+- Outbound event routing to chat UI (currently logging only)
+- Bot chat view integration
+
+#### Planned
+- Media endpoints (sendPhoto, sendVoice, sendAudio, sendDocument)
+- File download serving (static file route for media_dir)
+- sendChatAction (typing indicator)
+- /setdescription, /setabouttext dialog handlers
+- Bot avatars (/setuserpic)
+- Token copy-to-clipboard in BotFather UI
+- Online/offline status indicators
+- InlineKeyboardMarkup rendering in chat UI
+
+#### Out of Scope
 - Real Telegram API proxy (no forwarding to api.telegram.org)
 - Webhook mode (setWebhook / deleteWebhook as functional endpoints)
 - Group / supergroup / channel chat support
 - Multi-user support
 - Payments, Stickers, Games, Web Apps API
 - Bot store / discovery / marketplace
-- Internationalization of BotFather responses
 - Reply keyboards (ReplyKeyboardMarkup)
 - Inline mode (inline queries, /setinline)
 - Rate limiting
