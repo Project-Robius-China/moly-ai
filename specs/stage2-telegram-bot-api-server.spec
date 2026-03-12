@@ -1,5 +1,5 @@
 # Stage 2: Telegram Bot API Compatible Server
-# Moly Bot-Native Messaging — BotFather + Telegram Bot API 兼容服务器
+# Moly Bot-Native Messaging — BotFather + Telegram Bot API Compatible Server
 
 Status: design
 Created: 2026-03-10
@@ -7,17 +7,19 @@ Target: 5/3 Demo
 
 ## Intent
 
-将 Moly 从"开发者配置 Provider"模式转变为"Telegram 风格 Bot 管理"模式。
-用户在 Moly 内通过 BotFather 对话创建 Bot、获得 token，将 token 粘贴到
-crew-rs 的 Telegram 配置中，crew-rs 通过 teloxide 连接 Moly 的 Bot API
-服务器，用户在 Moly 中直接与 Bot 聊天。
+Transform Moly from a "developer configures Provider" model to a "Telegram-style
+Bot management" model. Users create Bots through a BotFather conversation within
+Moly, obtain a token, paste the token into crew-rs's Telegram configuration,
+crew-rs connects to Moly's Bot API server via teloxide, and users chat with
+Bots directly in Moly.
 
-核心创新：Moly 实现 Telegram Bot API 兼容服务端，任何支持 Telegram Bot API
-的框架（crew-rs、python-telegram-bot 等）都能接入。
+Core innovation: Moly implements a Telegram Bot API compatible server, so any
+framework supporting the Telegram Bot API (crew-rs, python-telegram-bot, etc.)
+can connect.
 
 ## Architecture
 
-### 层级划分
+### Layer Breakdown
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -25,38 +27,39 @@ crew-rs 的 Telegram 配置中，crew-rs 通过 teloxide 连接 Moly 的 Bot API
 │                                                         │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
 │  │ BotFather    │  │ Bot Chat     │  │ Bot Chat     │  │
-│  │ Chat View    │  │ "天气助手"   │  │ "代码助手"   │  │
+│  │ Chat View    │  │ "Weather     │  │ "Code        │  │
+│  │              │  │  Assistant"  │  │  Assistant"  │  │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  │
 │         │                 │                 │           │
 │  ┌──────▼─────────────────▼─────────────────▼────────┐  │
-│  │              Moly Bot Manager (App 层)             │  │
-│  │  • BotFather 对话逻辑（/newbot, /mybots, etc.）    │  │
-│  │  • 用户消息 → push_update()                        │  │
-│  │  • recv_outbound() → UI 显示 Bot 回复              │  │
+│  │           Moly Bot Manager (App Layer)             │  │
+│  │  • BotFather dialog logic (/newbot, /mybots, etc.) │  │
+│  │  • User message → push_update()                    │  │
+│  │  • recv_outbound() → Display Bot reply in UI       │  │
 │  └──────────────────────┬────────────────────────────┘  │
 └─────────────────────────┼───────────────────────────────┘
                           │
 ┌─────────────────────────▼───────────────────────────────┐
-│                    AITK (库层)                           │
+│                    AITK (Library Layer)                   │
 │                                                         │
 │  ┌─────────────────────────────────────────────────┐    │
-│  │      Telegram Bot API Server (新模块)            │    │
+│  │      Telegram Bot API Server (New Module)        │    │
 │  │  http://localhost:{port}/bot{token}/{method}     │    │
 │  │                                                  │    │
-│  │  端点实现:                                       │    │
-│  │  • getMe              — Bot 身份信息              │    │
-│  │  • getUpdates         — 长轮询获取消息            │    │
-│  │  • sendMessage        — 发送文本(+inline kbd)     │    │
-│  │  • sendPhoto          — 发送图片                  │    │
-│  │  • sendVoice          — 发送语音                  │    │
-│  │  • sendAudio          — 发送音频                  │    │
-│  │  • sendDocument       — 发送文档                  │    │
-│  │  • editMessageText    — 编辑消息                  │    │
-│  │  • deleteMessage      — 删除消息                  │    │
-│  │  • answerCallbackQuery — 回调查询应答             │    │
-│  │  • getFile / file download — 文件下载             │    │
+│  │  Endpoint implementations:                       │    │
+│  │  • getMe              — Bot identity info        │    │
+│  │  • getUpdates         — Long polling for messages│    │
+│  │  • sendMessage        — Send text (+inline kbd)  │    │
+│  │  • sendPhoto          — Send image               │    │
+│  │  • sendVoice          — Send voice               │    │
+│  │  • sendAudio          — Send audio               │    │
+│  │  • sendDocument       — Send document            │    │
+│  │  • editMessageText    — Edit message             │    │
+│  │  • deleteMessage      — Delete message           │    │
+│  │  • answerCallbackQuery — Callback query response │    │
+│  │  • getFile / file download — File download       │    │
 │  │                                                  │    │
-│  │  核心接口 (供 App 层调用):                        │    │
+│  │  Core interfaces (for App layer to call):        │    │
 │  │  • push_update(bot_token, Update)                │    │
 │  │  • recv_outbound(bot_token) -> OutboundMessage   │    │
 │  │  • create_bot(name, ...) -> BotInfo + token      │    │
@@ -77,130 +80,130 @@ crew-rs 的 Telegram 配置中，crew-rs 通过 teloxide 连接 Moly 的 Bot API
 │  └─────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────┘
                           ▲
-                          │ teloxide 长轮询
+                          │ teloxide long polling
 ┌─────────────────────────┴───────────────────────────────┐
 │                   crew-rs Gateway                        │
-│  配置:                                                   │
+│  Configuration:                                          │
 │  • TELOXIDE_TELEGRAM_API_URL=http://localhost:{port}     │
 │  • TELEGRAM_BOT_TOKEN=moly_{random_token}                │
-│  • 其余配置不变（LLM provider、tools 等）               │
+│  • Other config unchanged (LLM provider, tools, etc.)    │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### 消息流转
+### Message Flow
 
-1. **用户在 Moly 中发送消息**
-   → Moly Bot Manager 构造 Telegram `Update` 对象
-   → 调用 AITK `push_update(bot_token, update)`
-   → Update 进入 per-bot 队列
+1. **User sends a message in Moly**
+   → Moly Bot Manager constructs a Telegram `Update` object
+   → Calls AITK `push_update(bot_token, update)`
+   → Update enters the per-bot queue
 
-2. **crew-rs 拉取消息**
-   → teloxide 调用 `POST /bot{token}/getUpdates` (长轮询)
-   → AITK 服务器从队列中取出 Updates 返回
-   → 如无消息，阻塞等待（timeout 后返回空数组）
+2. **crew-rs pulls messages**
+   → teloxide calls `POST /bot{token}/getUpdates` (long polling)
+   → AITK server retrieves Updates from the queue and returns them
+   → If no messages, blocks and waits (returns empty array after timeout)
 
-3. **crew-rs 处理并回复**
-   → Agent 推理 + 工具调用
-   → teloxide 调用 `POST /bot{token}/sendMessage`
-   → AITK 服务器接收，存入 messages 表
-   → 通知 Moly `recv_outbound()` 有新消息
+3. **crew-rs processes and replies**
+   → Agent reasoning + tool calls
+   → teloxide calls `POST /bot{token}/sendMessage`
+   → AITK server receives the message, stores it in the messages table
+   → Notifies Moly via `recv_outbound()` that a new message is available
 
-4. **Moly 显示回复**
-   → Bot Manager 收到 OutboundMessage
-   → 更新 Chat UI 显示 Bot 回复
-   → 支持 inline keyboard 按钮渲染
+4. **Moly displays the reply**
+   → Bot Manager receives OutboundMessage
+   → Updates Chat UI to display Bot reply
+   → Supports inline keyboard button rendering
 
-## BotFather 对话设计
+## BotFather Dialog Design
 
-BotFather 是 Moly 中一个内置的特殊 Bot，出现在聊天列表中。
+BotFather is a built-in special Bot in Moly that appears in the chat list.
 
-### 命令体系
-
-```
-基础命令:
-/start     — 欢迎消息，展示可用命令
-/newbot    — 创建新 Bot（对话式向导）
-/mybots    — 列出所有 Bot（内联按钮选择）
-
-编辑 Bot:
-/setname        — 修改 Bot 名称
-/setdescription — 修改 Bot 描述
-/setabouttext   — 修改 Bot 简介
-/setuserpic     — 修改 Bot 头像
-/deletebot      — 删除 Bot
-
-Bot 设置:
-/token     — 查看 Bot token（用于粘贴到 crew-rs）
-/revoke    — 重新生成 token
-```
-
-### /newbot 对话流程
+### Command System
 
 ```
-用户: /newbot
-BotFather: 好的，让我们创建一个新 Bot。请给它起个名字：
+Basic commands:
+/start     — Welcome message, shows available commands
+/newbot    — Create a new Bot (interactive wizard)
+/mybots    — List all Bots (inline button selection)
 
-用户: 天气助手
-BotFather: 很好。现在给它起个用户名（必须以 bot 结尾）：
+Edit Bot:
+/setname        — Change Bot name
+/setdescription — Change Bot description
+/setabouttext   — Change Bot about text
+/setuserpic     — Change Bot avatar
+/deletebot      — Delete Bot
 
-用户: weather_bot
-BotFather: ✅ 完成！你的新 Bot "天气助手" 已创建。
-
-🔑 Token: moly_a1b2c3d4e5f6...
-
-使用方法：
-1. 复制上面的 Token
-2. 在 crew-rs 网页的 Telegram 配置中粘贴
-3. 设置 API URL 为: http://localhost:{port}
-4. 启动 Gateway
-
-你现在可以在聊天列表中找到 "天气助手" 开始对话。
-
-使用 /mybots 管理你的 Bot，使用 /token 随时查看 Token。
+Bot settings:
+/token     — View Bot token (for pasting into crew-rs)
+/revoke    — Regenerate token
 ```
 
-### /mybots 交互
+### /newbot Dialog Flow
 
 ```
-用户: /mybots
-BotFather: 选择一个 Bot 进行管理：
-[🤖 天气助手] [🤖 代码助手] [🤖 翻译Bot]
+User: /newbot
+BotFather: Alright, let's create a new Bot. Please give it a name:
 
-用户: (点击 天气助手)
-BotFather: 🤖 天气助手 (@weather_bot)
-选择操作：
-[编辑名称] [编辑描述] [编辑头像]
-[查看 Token] [重置 Token] [删除 Bot]
-[◀ 返回]
+User: Weather Assistant
+BotFather: Great. Now give it a username (must end with bot):
+
+User: weather_bot
+BotFather: Done! Your new Bot "Weather Assistant" has been created.
+
+Token: moly_a1b2c3d4e5f6...
+
+How to use:
+1. Copy the Token above
+2. Paste it into the Telegram config on the crew-rs web page
+3. Set the API URL to: http://localhost:{port}
+4. Start the Gateway
+
+You can now find "Weather Assistant" in the chat list and start chatting.
+
+Use /mybots to manage your Bots, use /token to view the Token at any time.
 ```
 
-## Telegram Bot API 实现细节
-
-### Token 格式
-
-Telegram 原始格式: `{bot_id}:{random_string}`
-Moly 格式: `moly_{bot_id}_{random_hex}` (前缀区分来源)
-
-### 长轮询实现 (getUpdates)
+### /mybots Interaction
 
 ```
-请求: POST /bot{token}/getUpdates
+User: /mybots
+BotFather: Choose a Bot to manage:
+[Weather Assistant] [Code Assistant] [Translator Bot]
+
+User: (clicks Weather Assistant)
+BotFather: Weather Assistant (@weather_bot)
+Choose an action:
+[Edit Name] [Edit Description] [Edit Avatar]
+[View Token] [Reset Token] [Delete Bot]
+[Back]
+```
+
+## Telegram Bot API Implementation Details
+
+### Token Format
+
+Telegram original format: `{bot_id}:{random_string}`
+Moly format: `moly_{bot_id}_{random_hex}` (prefix to distinguish origin)
+
+### Long Polling Implementation (getUpdates)
+
+```
+Request: POST /bot{token}/getUpdates
 Body: { "offset": 12345, "timeout": 30, "limit": 100 }
 
-逻辑:
-1. 验证 token → 找到对应 Bot
-2. 检查 update_queue 中 offset 之后的消息
-3. 如果有消息 → 立即返回
-4. 如果无消息 → 使用 tokio::select! 等待:
-   a. 新消息到达 → 返回
-   b. timeout 秒后 → 返回空数组 []
-5. 返回 Telegram 标准 Response<Vec<Update>> 格式
+Logic:
+1. Validate token → find corresponding Bot
+2. Check update_queue for messages after offset
+3. If messages exist → return immediately
+4. If no messages → wait using tokio::select!:
+   a. New message arrives → return
+   b. After timeout seconds → return empty array []
+5. Return in standard Telegram Response<Vec<Update>> format
 ```
 
-### Telegram 数据类型 (需实现子集)
+### Telegram Data Types (subset to implement)
 
 ```rust
-// 核心类型 (对应 Telegram Bot API)
+// Core types (corresponding to Telegram Bot API)
 struct User { id: i64, is_bot: bool, first_name: String, username: Option<String> }
 struct Chat { id: i64, chat_type: String, title: Option<String> }
 struct Message {
@@ -221,7 +224,7 @@ struct CallbackQuery { id: String, from: User, message: Option<Message>, data: O
 struct InlineKeyboardMarkup { inline_keyboard: Vec<Vec<InlineKeyboardButton>> }
 struct InlineKeyboardButton { text: String, callback_data: Option<String>, url: Option<String> }
 
-// 媒体类型
+// Media types
 struct PhotoSize { file_id: String, file_unique_id: String, width: i32, height: i32 }
 struct Voice { file_id: String, file_unique_id: String, duration: i32 }
 struct Audio { file_id: String, file_unique_id: String, duration: i32, title: Option<String> }
@@ -229,24 +232,24 @@ struct Document { file_id: String, file_unique_id: String, file_name: Option<Str
 struct File { file_id: String, file_unique_id: String, file_path: Option<String> }
 ```
 
-### API 端点详细
+### API Endpoint Details
 
-| 端点 | 方法 | 说明 | crew-rs 使用 |
-|------|------|------|-------------|
-| /bot{token}/getMe | GET/POST | 返回 Bot 信息 | 启动验证 |
-| /bot{token}/getUpdates | POST | 长轮询获取消息 | 核心消息接收 |
-| /bot{token}/sendMessage | POST | 发送文本+键盘 | 核心消息发送 |
-| /bot{token}/sendPhoto | POST | 发送图片 | 媒体发送 |
-| /bot{token}/sendVoice | POST | 发送语音 | 语音回复 |
-| /bot{token}/sendAudio | POST | 发送音频 | 音频回复 |
-| /bot{token}/sendDocument | POST | 发送文档 | 文件发送 |
-| /bot{token}/editMessageText | POST | 编辑消息 | 消息更新 |
-| /bot{token}/deleteMessage | POST | 删除消息 | 消息删除 |
-| /bot{token}/answerCallbackQuery | POST | 回调应答 | 按钮交互 |
-| /bot{token}/getFile | GET/POST | 获取文件信息 | 媒体下载 |
-| /file/bot{token}/{file_path} | GET | 下载文件 | 媒体下载 |
+| Endpoint | Method | Description | crew-rs Usage |
+|----------|--------|-------------|---------------|
+| /bot{token}/getMe | GET/POST | Return Bot info | Startup verification |
+| /bot{token}/getUpdates | POST | Long polling for messages | Core message receiving |
+| /bot{token}/sendMessage | POST | Send text + keyboard | Core message sending |
+| /bot{token}/sendPhoto | POST | Send image | Media sending |
+| /bot{token}/sendVoice | POST | Send voice | Voice reply |
+| /bot{token}/sendAudio | POST | Send audio | Audio reply |
+| /bot{token}/sendDocument | POST | Send document | File sending |
+| /bot{token}/editMessageText | POST | Edit message | Message update |
+| /bot{token}/deleteMessage | POST | Delete message | Message deletion |
+| /bot{token}/answerCallbackQuery | POST | Callback response | Button interaction |
+| /bot{token}/getFile | GET/POST | Get file info | Media download |
+| /file/bot{token}/{file_path} | GET | Download file | Media download |
 
-## 数据存储 (SQLite)
+## Data Storage (SQLite)
 
 ### Schema
 
@@ -293,9 +296,9 @@ CREATE INDEX idx_messages_bot_chat ON messages(bot_id, chat_id);
 CREATE INDEX idx_messages_timestamp ON messages(timestamp);
 ```
 
-## crew-rs 侧配置
+## crew-rs Side Configuration
 
-crew-rs 只需在 Telegram channel 配置中支持自定义 API URL:
+crew-rs only needs to support a custom API URL in the Telegram channel config:
 
 ```json
 {
@@ -312,67 +315,67 @@ crew-rs 只需在 Telegram channel 配置中支持自定义 API URL:
 }
 ```
 
-teloxide 支持通过 `Bot::from_env_with_client()` 或
-`TELOXIDE_TELEGRAM_API_URL` 环境变量设置自定义 base URL。
-crew-rs 需要的改动极小：在 `TelegramChannel::new()` 中传入 base_url 配置。
+teloxide supports setting a custom base URL via `Bot::from_env_with_client()` or
+the `TELOXIDE_TELEGRAM_API_URL` environment variable.
+The changes required in crew-rs are minimal: pass the base_url config in `TelegramChannel::new()`.
 
-## Moly App 层设计
+## Moly App Layer Design
 
-### BotFather 作为内置 Bot
+### BotFather as a Built-in Bot
 
-- 启动时自动出现在聊天列表第一位
-- 有特殊图标/标识（⚙️ 或 🤖 + 蓝色认证标记）
-- 不可删除、不可重命名
-- 对话逻辑完全在本地处理（不经过网络）
+- Automatically appears first in the chat list on startup
+- Has a special icon/badge (gear or robot + blue verification mark)
+- Cannot be deleted or renamed
+- Dialog logic is handled entirely locally (no network involved)
 
-### Bot 聊天列表
+### Bot Chat List
 
-创建的每个 Bot 自动出现在聊天列表中：
-- 显示 Bot 名称 + 头像
-- 显示连接状态（在线/离线，取决于 crew-rs 是否在轮询）
-- 点击进入聊天界面
-- 聊天界面与现有 Chat 界面复用
+Each created Bot automatically appears in the chat list:
+- Displays Bot name + avatar
+- Shows connection status (online/offline, depending on whether crew-rs is polling)
+- Click to enter chat view
+- Chat view reuses the existing Chat interface
 
-### 连接状态检测
+### Connection Status Detection
 
-- 当 crew-rs 调用 getUpdates 时，标记 Bot 为"在线"
-- 如果超过 2 分钟无 getUpdates 请求，标记为"离线"
-- UI 中显示绿点/灰点指示连接状态
+- When crew-rs calls getUpdates, mark the Bot as "online"
+- If no getUpdates request for more than 2 minutes, mark as "offline"
+- Display green/gray dot in the UI to indicate connection status
 
 ## Boundary & Constraints
 
-- AITK 的 Bot API 服务器不依赖 Makepad，纯 Rust + axum
-- AITK 不处理 UI 逻辑，只提供消息队列接口
-- Token 仅在本地有效，不可用于真实 Telegram
-- 服务器仅监听 localhost，不暴露到网络
-- SQLite 数据库文件存储在用户数据目录
+- AITK's Bot API server does not depend on Makepad; pure Rust + axum
+- AITK does not handle UI logic; it only provides message queue interfaces
+- Tokens are only valid locally; they cannot be used with the real Telegram
+- Server only listens on localhost; not exposed to the network
+- SQLite database file is stored in the user data directory
 
-## Out of Scope (本期不做)
+## Out of Scope (Not in This Phase)
 
-- 真实 Telegram 代理（不转发到 api.telegram.org）
-- Webhook 模式（只支持长轮询）
-- Group chat 支持（只支持 1:1 对话）
+- Real Telegram proxy (no forwarding to api.telegram.org)
+- Webhook mode (only long polling is supported)
+- Group chat support (only 1:1 conversations)
 - Payments / Stickers / Games API
-- Bot 商店 / Bot 发现
-- 多用户支持（单用户桌面应用）
+- Bot store / Bot discovery
+- Multi-user support (single-user desktop application)
 
 ## Decision Log
 
 | # | Decision | Rationale |
 |---|----------|-----------|
-| 1 | BotFather 对话式而非设置页面 | 复刻 Telegram 体验，零 UI 学习成本 |
-| 2 | 方案 A: 完整 Telegram Bot API 服务器 | 最大兼容性，crew-rs 零改动 |
-| 3 | AITK 层实现 API 服务器 | 通用可复用，不绑定 Makepad |
-| 4 | SQLite 持久化 | 支持消息历史和复杂查询 |
-| 5 | 全功能复制 | 完整支持文本/媒体/键盘/编辑/删除 |
-| 6 | 长轮询 (非 Webhook) | 桌面应用无公网 IP，与 crew-rs 现有模式一致 |
+| 1 | BotFather as a dialog rather than a settings page | Replicates the Telegram experience; zero UI learning curve |
+| 2 | Approach A: Full Telegram Bot API server | Maximum compatibility; zero changes to crew-rs |
+| 3 | Implement API server in the AITK layer | Generic and reusable; not tied to Makepad |
+| 4 | SQLite persistence | Supports message history and complex queries |
+| 5 | Full feature replication | Complete support for text/media/keyboard/edit/delete |
+| 6 | Long polling (not Webhook) | Desktop app has no public IP; consistent with crew-rs's existing mode |
 
 ## Success Criteria
 
-1. 用户通过 BotFather `/newbot` 在 30 秒内创建 Bot
-2. Token 粘贴到 crew-rs 后，crew-rs 能成功连接并聊天
-3. 支持文本消息双向通信
-4. 支持 crew-rs 发送的 inline keyboard 按钮交互
-5. 支持媒体消息（图片、语音、文档）
-6. Bot 连接状态实时显示
-7. 消息历史持久化存储，重启后可恢复
+1. User creates a Bot via BotFather `/newbot` within 30 seconds
+2. After pasting the token into crew-rs, crew-rs can successfully connect and chat
+3. Supports bidirectional text message communication
+4. Supports inline keyboard button interactions sent by crew-rs
+5. Supports media messages (images, voice, documents)
+6. Bot connection status is displayed in real time
+7. Message history is persistently stored and recoverable after restart

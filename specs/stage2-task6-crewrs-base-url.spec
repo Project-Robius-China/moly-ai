@@ -1,70 +1,70 @@
 spec: task
-name: "crew-rs Telegram base_url 支持"
+name: "crew-rs Telegram base_url Support"
 tags: [stage2, crew-rs, telegram, config]
 ---
 
-## 意图
+## Intent
 
-在 crew-rs 的 Telegram channel 配置中添加 `base_url` 字段，允许 teloxide
-连接到自定义的 Telegram Bot API 服务器（如 Moly 的本地服务器）而非
-api.telegram.org。这是 Moly Bot-Native Messaging 方案的 crew-rs 侧唯一改动。
+Add a `base_url` field to the Telegram channel configuration in crew-rs,
+allowing teloxide to connect to a custom Telegram Bot API server (such as
+Moly's local server) instead of api.telegram.org. This is the only change
+required on the crew-rs side for the Moly Bot-Native Messaging approach.
 
-## 约束
+## Constraints
 
-- 改动范围极小：仅修改 TelegramChannel 初始化逻辑
-- 向后兼容：base_url 为 Optional，默认行为不变（连 api.telegram.org）
-- 使用 teloxide 内置的 `Bot::set_api_url()` 方法设置自定义 URL
-- Web dashboard 的 TelegramTab 添加可选的 API URL 输入框
+- Minimal scope of changes: only modify TelegramChannel initialization logic
+- Backward compatible: base_url is Optional; default behavior unchanged (connects to api.telegram.org)
+- Use teloxide's built-in `Bot::set_api_url()` method to set the custom URL
+- Add an optional API URL input field to the Web dashboard's TelegramTab
 
-## 已定决策
+## Decided
 
-- 配置字段名: `base_url`（与 LLM provider 的 base_url 命名一致）
-- teloxide API: 使用 `reqwest::Url::parse(base_url)` 然后
-  `Bot::set_api_url(url)`
-- Dashboard UI: 在 Bot Token 输入框下方添加 "API URL (Optional)"
-  输入框，placeholder 为 "https://api.telegram.org"
+- Config field name: `base_url` (consistent with LLM provider base_url naming)
+- teloxide API: use `reqwest::Url::parse(base_url)` then `Bot::set_api_url(url)`
+- Dashboard UI: add an "API URL (Optional)" input field below the Bot Token
+  input, with placeholder "https://api.telegram.org"
 
-## 边界
+## Boundary
 
-### 允许修改
-- crates/crew-bus/src/telegram_channel.rs（TelegramChannel::new 添加参数）
-- crates/crew-cli/src/commands/gateway/mod.rs（读取 base_url 配置）
-- crates/crew-cli/src/config.rs（ChannelEntry settings 新增字段）
-- dashboard/src/components/tabs/TelegramTab.tsx（添加 URL 输入框）
+### Allowed to Modify
+- crates/crew-bus/src/telegram_channel.rs (add parameter to TelegramChannel::new)
+- crates/crew-cli/src/commands/gateway/mod.rs (read base_url config)
+- crates/crew-cli/src/config.rs (add new field to ChannelEntry settings)
+- dashboard/src/components/tabs/TelegramTab.tsx (add URL input field)
 
-### 禁止
-- 不修改 TelegramChannel 的消息处理逻辑
-- 不修改其他 channel 类型
-- 不破坏无 base_url 时的默认行为
+### Forbidden
+- Do not modify TelegramChannel's message processing logic
+- Do not modify other channel types
+- Do not break default behavior when base_url is absent
 
-## 排除范围
+## Out of Scope
 
-- TELOXIDE_TELEGRAM_API_URL 环境变量支持（teloxide 已内置）
-- URL 有效性验证（超出 URL 解析之外的验证）
-- 自动发现 Moly 服务器
+- TELOXIDE_TELEGRAM_API_URL environment variable support (already built into teloxide)
+- URL validity validation (beyond URL parsing)
+- Auto-discovery of Moly server
 
-## 验收标准
+## Acceptance Criteria
 
-场景: 不配置 base_url 时行为不变
-  测试: test_default_telegram_url
-  假设 channel 配置不包含 "base_url" 字段
-  当 创建 TelegramChannel
-  那么 teloxide Bot 使用默认的 "https://api.telegram.org" URL
+Scenario: Behavior unchanged when base_url is not configured
+  Test: test_default_telegram_url
+  Given the channel config does not contain a "base_url" field
+  When creating a TelegramChannel
+  Then the teloxide Bot uses the default "https://api.telegram.org" URL
 
-场景: 配置 base_url 后连接自定义服务器
-  测试: test_custom_base_url
-  假设 channel 配置 base_url 为 "http://localhost:8488"
-  当 创建 TelegramChannel 并调用 getMe
-  那么 HTTP 请求发送到 "http://localhost:8488/bot{token}/getMe"
+Scenario: Connects to custom server after configuring base_url
+  Test: test_custom_base_url
+  Given the channel config has base_url set to "http://localhost:8488"
+  When creating a TelegramChannel and calling getMe
+  Then the HTTP request is sent to "http://localhost:8488/bot{token}/getMe"
 
-场景: 无效 base_url 返回错误
-  测试: test_invalid_base_url_returns_error
-  假设 channel 配置 base_url 为 "not-a-url"
-  当 创建 TelegramChannel
-  那么 返回配置错误，包含 URL 解析失败信息
+Scenario: Invalid base_url returns an error
+  Test: test_invalid_base_url_returns_error
+  Given the channel config has base_url set to "not-a-url"
+  When creating a TelegramChannel
+  Then a config error is returned containing URL parse failure information
 
-场景: Dashboard 显示 API URL 输入框
-  测试: test_dashboard_shows_api_url_input
-  当 查看 Dashboard 的 Telegram 配置页
-  那么 显示 "API URL" 可选输入框
-  并且 placeholder 为 "https://api.telegram.org"
+Scenario: Dashboard displays API URL input field
+  Test: test_dashboard_shows_api_url_input
+  When viewing the Dashboard's Telegram configuration page
+  Then an optional "API URL" input field is displayed
+  And the placeholder is "https://api.telegram.org"

@@ -1,62 +1,65 @@
 spec: task
 name: "Stage1-Task3: WebSocket Gateway"
-status: cancelled
+status: delayed
 tags: [stage1, websocket, crew-rs]
 ---
 
-## 意图
+> **Note:** Delayed: SSE is sufficient for crew-rs integration.
 
-实现 WebSocket 客户端连接 crew-rs WebSocket Gateway，支持双工通信。
-服务端可主动推送状态，客户端可发送聊天消息和接收流式响应。
-moly-ai 已有 openclaw 的 WebSocket 支持可作为参考。
+## Intent
 
-## 已定决策
+Implement a WebSocket client to connect to the crew-rs WebSocket Gateway, supporting duplex
+communication. The server can proactively push status updates, and the client can send chat
+messages and receive streaming responses. moly-ai already has WebSocket support for openclaw
+that can serve as a reference.
 
-- 使用 futures 的 channel 而非 tokio channel（跨平台兼容）
-- WebSocket 协议层使用 tungstenite 或类似库
-- 消息格式为 JSON，兼容 crew-rs 的帧协议
-- 认证通过 WebSocket 握手 header 传递 API key
+## Decided
 
-## 边界
+- Use futures channels instead of tokio channels (cross-platform compatibility)
+- Use tungstenite or a similar library for the WebSocket protocol layer
+- Message format is JSON, compatible with the crew-rs frame protocol
+- Authentication is passed via the WebSocket handshake header with an API key
+
+## Boundary
 
 ### Allowed Changes
 - src/clients/**
 - src/utils/**
 
 ### Forbidden
-- 不要修改现有 OpenAI 客户端的行为
-- 不要在库代码中使用 tokio::spawn
-- 不要硬编码 WebSocket 地址
+- Do not modify the behavior of the existing OpenAI client
+- Do not use tokio::spawn in library code
+- Do not hardcode WebSocket addresses
 
-## 排除范围
+## Out of Scope
 
-- 工具审批 UI（Task 4 独立实现）
-- 记忆帧协议（Stage 3）
-- 断线重连的高级策略
+- Tool approval UI (implemented separately in Task 4)
+- Memory frame protocol (Stage 3)
+- Advanced reconnection strategies
 
-## 完成条件
+## Acceptance Criteria
 
-Scenario: WebSocket 握手和认证
+Scenario: WebSocket handshake and authentication
   Test: test_ws_handshake_with_auth
-  Given crew-rs WebSocket gateway 地址和 API key
-  When 客户端发起 WebSocket 连接
-  Then 握手成功并建立连接
+  Given crew-rs WebSocket gateway address and API key
+  When the client initiates a WebSocket connection
+  Then the handshake succeeds and a connection is established
 
-Scenario: 流式聊天消息收发
+Scenario: Streaming chat message send/receive
   Test: test_ws_chat_streaming
-  Given 已建立 WebSocket 连接
-  When 发送聊天消息
-  Then 接收到多个流式 chunk
-  And 最终组装成完整 MessageContent
+  Given an established WebSocket connection
+  When a chat message is sent
+  Then multiple streaming chunks are received
+  And they are assembled into a complete MessageContent
 
-Scenario: 服务端主动推送
+Scenario: Server-initiated push
   Test: test_ws_server_push
-  Given 已建立 WebSocket 连接
-  When 服务端推送状态更新帧
-  Then 客户端正确解析并回调
+  Given an established WebSocket connection
+  When the server pushes a status update frame
+  Then the client correctly parses it and triggers the callback
 
-Scenario: 连接错误处理
+Scenario: Connection error handling
   Test: test_ws_connection_error
-  Given 无效的 WebSocket 地址
-  When 客户端尝试连接
-  Then 返回有意义的错误信息
+  Given an invalid WebSocket address
+  When the client attempts to connect
+  Then a meaningful error message is returned

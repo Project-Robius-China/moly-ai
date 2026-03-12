@@ -1,225 +1,226 @@
 spec: task
-name: "AITK Telegram Bot API Server 核心"
+name: "AITK Telegram Bot API Server Core"
 tags: [stage2, aitk, telegram-api, server]
 ---
 
-## 意图
+## Intent
 
-在 AITK 中实现 Telegram Bot API 兼容的 HTTP 服务器核心模块。该服务器接收
-teloxide 客户端（如 crew-rs）的长轮询请求，转发用户消息，并接收 Bot 回复。
-这是 Stage 2 Bot-Native Messaging 的基础设施层，为 Moly 提供与任何
-Telegram Bot 框架通信的能力。
+Implement a Telegram Bot API-compatible HTTP server core module in AITK. This server receives
+long-polling requests from teloxide clients (e.g., crew-rs), forwards user messages, and receives
+Bot replies. This is the infrastructure layer for Stage 2 Bot-Native Messaging, providing Moly
+with the ability to communicate with any Telegram Bot framework.
 
-模块必须通过 feature flag 和 cfg gate 保证全平台编译通过（wasm32 下禁用）。
+The module must compile on all platforms via feature flags and cfg gates (disabled on wasm32).
 
-## 约束
+## Constraints
 
-- 整个模块 gate 在 `cfg(not(target_arch = "wasm32"))` 下，并使用 feature
+- The entire module is gated under `cfg(not(target_arch = "wasm32"))` and uses the feature
   flag `telegram-server`
-- 异步原语使用 `futures::channel::mpsc` 而非 `tokio::mpsc`，长轮询等待使用
-  `futures::future::select` 而非 `tokio::select!`
-- 库代码禁止 `.unwrap()`，仅在不变量违反时使用 `.expect()` 并附描述
-- 所有公开类型、函数、方法必须有 doc comment
-- Token 格式为 `{numeric_bot_id}:{moly_random_hex}`，兼容 teloxide 的
-  token 解析（teloxide 按 `:` 分割提取 bot_id）
-- 同一 Bot 同时只允许一个 `getUpdates` 长轮询连接（后到的返回 409 Conflict），
-  与 Telegram 真实行为一致
-- 服务器状态使用 `Arc<ServerState>` 共享，per-bot 队列使用独立锁
-- 单用户模式：user_id 固定为 1，每个 Bot 对应一个 chat_id（等于 bot_id）
+- Async primitives use `futures::channel::mpsc` instead of `tokio::mpsc`; long-polling waits
+  use `futures::future::select` instead of `tokio::select!`
+- Library code must not use `.unwrap()`; use `.expect()` only for invariant violations with
+  a descriptive message
+- All public types, functions, and methods must have doc comments
+- Token format is `{numeric_bot_id}:{moly_random_hex}`, compatible with teloxide's token
+  parsing (teloxide splits on `:` to extract bot_id)
+- Only one `getUpdates` long-polling connection is allowed per Bot at a time (subsequent ones
+  return 409 Conflict), consistent with real Telegram behavior
+- Server state uses `Arc<ServerState>` for sharing; per-bot queues use independent locks
+- Single-user mode: user_id is fixed at 1, each Bot corresponds to one chat_id (equal to bot_id)
 
-## 已定决策
+## Decided
 
-- HTTP 框架: axum（与 moly-sync 已有模式一致）
-- Token 格式: `{bot_id}:{moly_hex32}`（32 位随机 hex，兼容 teloxide）
-- 默认端口: 8488，端口被占用时自动选择随机端口
-- 服务器在 Moly 启动时延迟启动（第一个 Bot 创建时）
-- 返回 `ServerHandle` 支持 graceful shutdown（参考 moly-sync 模式）
-- per-bot update queue 容量上限: 1000 条，超出后丢弃最旧的
-- getUpdates timeout 范围: 0-60 秒，默认 30 秒
-- 所有 API 响应遵循 Telegram 标准格式: `{"ok": true, "result": ...}`
-  或 `{"ok": false, "error_code": N, "description": "..."}`
-- teloxide 启动时会调用 `getWebhookInfo` 和 `deleteWebhook`，需实现为
-  返回空 webhook 的 no-op
+- HTTP framework: axum (consistent with existing moly-sync patterns)
+- Token format: `{bot_id}:{moly_hex32}` (32-character random hex, compatible with teloxide)
+- Default port: 8488, automatically selects a random port if the port is occupied
+- Server starts lazily when Moly launches (on first Bot creation)
+- Returns `ServerHandle` supporting graceful shutdown (following the moly-sync pattern)
+- Per-bot update queue capacity limit: 1000 entries; oldest entries are dropped when exceeded
+- getUpdates timeout range: 0-60 seconds, default 30 seconds
+- All API responses follow the standard Telegram format: `{"ok": true, "result": ...}`
+  or `{"ok": false, "error_code": N, "description": "..."}`
+- teloxide calls `getWebhookInfo` and `deleteWebhook` at startup; these must be implemented
+  as no-ops that return an empty webhook
 
-## 边界
+## Boundary
 
-### 允许修改
-- moly-aitk/src/telegram_server/**（新建）
-- moly-aitk/Cargo.toml（添加 feature flag 和依赖）
-- moly-aitk/src/lib.rs（导出新模块）
+### Allowed Changes
+- moly-aitk/src/telegram_server/** (new)
+- moly-aitk/Cargo.toml (add feature flag and dependencies)
+- moly-aitk/src/lib.rs (export new module)
 
-### 禁止
-- 不修改 moly-aitk 现有的 client 代码（OpenAI client、CrewRs client 等）
-- 不添加 Makepad 依赖
-- 不使用 tokio channel 原语（使用 futures channel）
-- 不在 wasm32 下编译 HTTP 服务器代码
+### Forbidden
+- Do not modify existing moly-aitk client code (OpenAI client, CrewRs client, etc.)
+- Do not add Makepad dependencies
+- Do not use tokio channel primitives (use futures channels)
+- Do not compile HTTP server code under wasm32
 
-## 排除范围
+## Out of Scope
 
-- 媒体文件发送/接收（sendPhoto, sendVoice 等 → Task 3）
-- SQLite 持久化存储（→ Task 2）
-- BotFather 对话逻辑（→ Task 4）
-- Moly UI 集成（→ Task 5）
-- crew-rs base_url 修改（→ Task 6）
+- Media file send/receive (sendPhoto, sendVoice, etc. -> Task 3)
+- SQLite persistent storage (-> Task 2)
+- BotFather dialog logic (-> Task 4)
+- Moly UI integration (-> Task 5)
+- crew-rs base_url modification (-> Task 6)
 
-## 验收标准
+## Acceptance Criteria
 
-场景: 服务器启动并监听指定端口
-  测试: test_server_starts_on_configured_port
-  假设 配置端口为 "8488"
-  当 调用 `TelegramBotApiServer::start(config)` 启动服务器
-  那么 服务器在 "http://127.0.0.1:8488" 上监听
-  并且 返回 `ServerHandle` 可用于 graceful shutdown
+Scenario: Server starts and listens on the configured port
+  Test: test_server_starts_on_configured_port
+  Given port is configured as "8488"
+  When `TelegramBotApiServer::start(config)` is called to start the server
+  Then the server listens on "http://127.0.0.1:8488"
+  And a `ServerHandle` is returned that can be used for graceful shutdown
 
-场景: getMe 返回 Bot 信息
-  测试: test_get_me_returns_bot_info
-  假设 已创建名为 "天气助手" 用户名为 "weather_bot" 的 Bot，token 为 "1:moly_abc123"
-  当 teloxide 调用 `GET /bot1:moly_abc123/getMe`
-  那么 响应状态码为 200
-  并且 响应体为:
-    | 字段             | 值            |
-    | ok               | true          |
-    | result.id        | 1             |
-    | result.is_bot    | true          |
-    | result.first_name| 天气助手       |
-    | result.username  | weather_bot   |
+Scenario: getMe returns Bot information
+  Test: test_get_me_returns_bot_info
+  Given a Bot has been created with name "Weather Assistant", username "weather_bot", token "1:moly_abc123"
+  When teloxide calls `GET /bot1:moly_abc123/getMe`
+  Then the response status code is 200
+  And the response body is:
+    | Field            | Value              |
+    | ok               | true               |
+    | result.id        | 1                  |
+    | result.is_bot    | true               |
+    | result.first_name| Weather Assistant  |
+    | result.username  | weather_bot        |
 
-场景: 无效 token 返回 401
-  测试: test_invalid_token_returns_401
-  当 调用 `GET /botinvalid_token/getMe`
-  那么 响应状态码为 401
-  并且 响应体 `ok` 为 false
-  并且 响应体 `error_code` 为 401
+Scenario: Invalid token returns 401
+  Test: test_invalid_token_returns_401
+  When `GET /botinvalid_token/getMe` is called
+  Then the response status code is 401
+  And the response body `ok` is false
+  And the response body `error_code` is 401
 
-场景: getUpdates 长轮询 — 有消息时立即返回
-  测试: test_get_updates_returns_pending_messages
-  假设 已创建 Bot token "1:moly_abc123"
-  并且 update queue 中有 "1" 条 offset 为 "100" 的文本消息 "你好"
-  当 调用 `POST /bot1:moly_abc123/getUpdates` body 为 `{"offset": 100, "timeout": 30}`
-  那么 响应在 "1" 秒内返回
-  并且 result 数组长度为 "1"
-  并且 result[0].update_id 为 "100"
-  并且 result[0].message.text 为 "你好"
+Scenario: getUpdates long-polling - returns immediately when messages are available
+  Test: test_get_updates_returns_pending_messages
+  Given Bot token "1:moly_abc123" has been created
+  And the update queue contains "1" text message "Hello" with offset "100"
+  When `POST /bot1:moly_abc123/getUpdates` is called with body `{"offset": 100, "timeout": 30}`
+  Then the response is returned within "1" second
+  And the result array length is "1"
+  And result[0].update_id is "100"
+  And result[0].message.text is "Hello"
 
-场景: getUpdates 长轮询 — 无消息时等待至超时
-  测试: test_get_updates_waits_until_timeout
-  假设 已创建 Bot token "1:moly_abc123"
-  并且 update queue 为空
-  当 调用 `POST /bot1:moly_abc123/getUpdates` body 为 `{"offset": 0, "timeout": 2}`
-  那么 响应在 "2" 至 "3" 秒内返回
-  并且 result 为空数组
+Scenario: getUpdates long-polling - waits until timeout when no messages are available
+  Test: test_get_updates_waits_until_timeout
+  Given Bot token "1:moly_abc123" has been created
+  And the update queue is empty
+  When `POST /bot1:moly_abc123/getUpdates` is called with body `{"offset": 0, "timeout": 2}`
+  Then the response is returned within "2" to "3" seconds
+  And the result is an empty array
 
-场景: getUpdates 长轮询 — 等待期间有新消息时立即返回
-  测试: test_get_updates_returns_on_new_message
-  假设 已创建 Bot token "1:moly_abc123"
-  并且 update queue 为空
-  当 调用 `POST /bot1:moly_abc123/getUpdates` body 为 `{"offset": 0, "timeout": 30}`
-  并且 在 "1" 秒后 push_update 推入一条消息
-  那么 响应在 "2" 秒内返回
-  并且 result 数组长度为 "1"
+Scenario: getUpdates long-polling - returns immediately when a new message arrives during the wait
+  Test: test_get_updates_returns_on_new_message
+  Given Bot token "1:moly_abc123" has been created
+  And the update queue is empty
+  When `POST /bot1:moly_abc123/getUpdates` is called with body `{"offset": 0, "timeout": 30}`
+  And after "1" second a message is pushed via push_update
+  Then the response is returned within "2" seconds
+  And the result array length is "1"
 
-场景: getUpdates 并发拒绝
-  测试: test_get_updates_rejects_concurrent_poller
-  假设 已创建 Bot token "1:moly_abc123"
-  并且 一个 getUpdates 长轮询正在进行中
-  当 第二个客户端调用 `POST /bot1:moly_abc123/getUpdates`
-  那么 第二个请求响应状态码为 409
+Scenario: getUpdates concurrent rejection
+  Test: test_get_updates_rejects_concurrent_poller
+  Given Bot token "1:moly_abc123" has been created
+  And a getUpdates long-polling request is in progress
+  When a second client calls `POST /bot1:moly_abc123/getUpdates`
+  Then the second request response status code is 409
 
-场景: sendMessage 接收 Bot 回复
-  测试: test_send_message_stores_and_notifies
-  假设 已创建 Bot token "1:moly_abc123"
-  当 调用 `POST /bot1:moly_abc123/sendMessage` body 为:
-    | 字段      | 值    |
-    | chat_id   | 1     |
-    | text      | 你好  |
-  那么 响应状态码为 200
-  并且 响应体 result.message_id 为正整数
-  并且 outbound channel 收到一条包含 "你好" 的消息
+Scenario: sendMessage receives Bot reply
+  Test: test_send_message_stores_and_notifies
+  Given Bot token "1:moly_abc123" has been created
+  When `POST /bot1:moly_abc123/sendMessage` is called with body:
+    | Field     | Value   |
+    | chat_id   | 1       |
+    | text      | Hello   |
+  Then the response status code is 200
+  And the response body result.message_id is a positive integer
+  And the outbound channel receives a message containing "Hello"
 
-场景: sendMessage 带 inline keyboard
-  测试: test_send_message_with_inline_keyboard
-  假设 已创建 Bot token "1:moly_abc123"
-  当 调用 `POST /bot1:moly_abc123/sendMessage` body 包含 reply_markup:
-    | 字段                                | 值                    |
-    | chat_id                             | 1                     |
-    | text                                | 选择一个选项           |
-    | reply_markup.inline_keyboard[0][0]  | {"text":"A","callback_data":"a"} |
-  那么 响应状态码为 200
-  并且 outbound channel 收到的消息包含 inline_keyboard 数据
+Scenario: sendMessage with inline keyboard
+  Test: test_send_message_with_inline_keyboard
+  Given Bot token "1:moly_abc123" has been created
+  When `POST /bot1:moly_abc123/sendMessage` is called with body containing reply_markup:
+    | Field                               | Value                                  |
+    | chat_id                             | 1                                      |
+    | text                                | Choose an option                       |
+    | reply_markup.inline_keyboard[0][0]  | {"text":"A","callback_data":"a"}       |
+  Then the response status code is 200
+  And the outbound channel receives a message containing inline_keyboard data
 
-场景: editMessageText 编辑已发送消息
-  测试: test_edit_message_text
-  假设 已创建 Bot token "1:moly_abc123"
-  并且 Bot 已发送 message_id 为 "5" 的消息
-  当 调用 `POST /bot1:moly_abc123/editMessageText` body 为:
-    | 字段       | 值         |
-    | chat_id    | 1          |
-    | message_id | 5          |
-    | text       | 更新后的文本 |
-  那么 响应状态码为 200
-  并且 outbound channel 收到一条 edit 类型的消息
+Scenario: editMessageText edits a sent message
+  Test: test_edit_message_text
+  Given Bot token "1:moly_abc123" has been created
+  And the Bot has sent a message with message_id "5"
+  When `POST /bot1:moly_abc123/editMessageText` is called with body:
+    | Field      | Value        |
+    | chat_id    | 1            |
+    | message_id | 5            |
+    | text       | Updated text |
+  Then the response status code is 200
+  And the outbound channel receives an edit-type message
 
-场景: deleteMessage 删除消息
-  测试: test_delete_message
-  假设 已创建 Bot token "1:moly_abc123"
-  并且 Bot 已发送 message_id 为 "5" 的消息
-  当 调用 `POST /bot1:moly_abc123/deleteMessage` body 为:
-    | 字段       | 值 |
-    | chat_id    | 1  |
-    | message_id | 5  |
-  那么 响应状态码为 200
-  并且 outbound channel 收到一条 delete 类型的消息
+Scenario: deleteMessage deletes a message
+  Test: test_delete_message
+  Given Bot token "1:moly_abc123" has been created
+  And the Bot has sent a message with message_id "5"
+  When `POST /bot1:moly_abc123/deleteMessage` is called with body:
+    | Field      | Value |
+    | chat_id    | 1     |
+    | message_id | 5     |
+  Then the response status code is 200
+  And the outbound channel receives a delete-type message
 
-场景: answerCallbackQuery 应答回调
-  测试: test_answer_callback_query
-  假设 已创建 Bot token "1:moly_abc123"
-  当 调用 `POST /bot1:moly_abc123/answerCallbackQuery` body 为:
-    | 字段              | 值       |
+Scenario: answerCallbackQuery responds to callback
+  Test: test_answer_callback_query
+  Given Bot token "1:moly_abc123" has been created
+  When `POST /bot1:moly_abc123/answerCallbackQuery` is called with body:
+    | Field             | Value    |
     | callback_query_id | cq_001   |
-  那么 响应状态码为 200
-  并且 响应体 result 为 true
+  Then the response status code is 200
+  And the response body result is true
 
-场景: getWebhookInfo 返回空 webhook（teloxide 启动兼容）
-  测试: test_get_webhook_info_returns_empty
-  假设 已创建 Bot token "1:moly_abc123"
-  当 调用 `GET /bot1:moly_abc123/getWebhookInfo`
-  那么 响应状态码为 200
-  并且 result.url 为空字符串
+Scenario: getWebhookInfo returns empty webhook (teloxide startup compatibility)
+  Test: test_get_webhook_info_returns_empty
+  Given Bot token "1:moly_abc123" has been created
+  When `GET /bot1:moly_abc123/getWebhookInfo` is called
+  Then the response status code is 200
+  And result.url is an empty string
 
-场景: deleteWebhook no-op（teloxide 启动兼容）
-  测试: test_delete_webhook_noop
-  假设 已创建 Bot token "1:moly_abc123"
-  当 调用 `POST /bot1:moly_abc123/deleteWebhook`
-  那么 响应状态码为 200
-  并且 result 为 true
+Scenario: deleteWebhook no-op (teloxide startup compatibility)
+  Test: test_delete_webhook_noop
+  Given Bot token "1:moly_abc123" has been created
+  When `POST /bot1:moly_abc123/deleteWebhook` is called
+  Then the response status code is 200
+  And result is true
 
-场景: setMyCommands 存储并返回成功
-  测试: test_set_my_commands
-  假设 已创建 Bot token "1:moly_abc123"
-  当 调用 `POST /bot1:moly_abc123/setMyCommands` body 包含 commands 列表
-  那么 响应状态码为 200
-  并且 result 为 true
+Scenario: setMyCommands stores and returns success
+  Test: test_set_my_commands
+  Given Bot token "1:moly_abc123" has been created
+  When `POST /bot1:moly_abc123/setMyCommands` is called with body containing a commands list
+  Then the response status code is 200
+  And result is true
 
-场景: push_update 正确排入队列
-  测试: test_push_update_enqueues_message
-  假设 已创建 Bot token "1:moly_abc123"
-  当 通过 `server.push_update("1:moly_abc123", update)` 推入一条文本消息
-  那么 该消息可通过 getUpdates 获取
+Scenario: push_update correctly enqueues messages
+  Test: test_push_update_enqueues_message
+  Given Bot token "1:moly_abc123" has been created
+  When a text message is pushed via `server.push_update("1:moly_abc123", update)`
+  Then the message can be retrieved via getUpdates
 
-场景: 模块在 wasm32 下编译通过（不含服务器代码）
-  测试: test_wasm32_compilation
-  当 使用 `cargo check --target wasm32-unknown-unknown` 编译 moly-aitk
-  那么 编译成功
-  但是 `telegram_server` 模块未被包含
+Scenario: Module compiles under wasm32 (without server code)
+  Test: test_wasm32_compilation
+  When moly-aitk is compiled with `cargo check --target wasm32-unknown-unknown`
+  Then compilation succeeds
+  But the `telegram_server` module is not included
 
-场景: 错误类型覆盖所有失败场景
-  测试: test_error_types_are_defined
-  当 检查 `BotApiError` 枚举定义
-  那么 包含以下变体:
-    | 变体             | 说明              |
-    | InvalidToken     | token 无效或不存在 |
-    | BotNotFound      | Bot 不存在        |
-    | InvalidRequest   | 请求格式错误      |
-    | ConflictPoller   | 并发轮询冲突      |
-    | QueueFull        | 更新队列已满      |
-    | InternalError    | 内部错误          |
+Scenario: Error types cover all failure scenarios
+  Test: test_error_types_are_defined
+  When the `BotApiError` enum definition is inspected
+  Then it contains the following variants:
+    | Variant          | Description                        |
+    | InvalidToken     | Token is invalid or does not exist |
+    | BotNotFound      | Bot does not exist                 |
+    | InvalidRequest   | Request format is invalid          |
+    | ConflictPoller   | Concurrent polling conflict        |
+    | QueueFull        | Update queue is full               |
+    | InternalError    | Internal error                     |
