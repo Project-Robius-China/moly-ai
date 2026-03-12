@@ -296,7 +296,7 @@ mod tests {
 
         assert_ne!(v1.version(), Version::new());
 
-        let v2 = v1.clone();
+        let v2 = v1;
         assert_eq!(v2.data(), &20);
         assert_eq!(v2.version(), v1.version());
     }

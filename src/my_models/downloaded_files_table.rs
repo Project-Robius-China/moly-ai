@@ -119,7 +119,7 @@ impl Widget for DownloadedFilesTable {
         };
 
         self.current_results
-            .sort_by(|a, b| b.downloaded_at.cmp(&a.downloaded_at));
+            .sort_by_key(|file| std::cmp::Reverse(file.downloaded_at));
 
         let entries_count = self.current_results.len();
         let last_item_id = if entries_count > 0 { entries_count } else { 0 };
