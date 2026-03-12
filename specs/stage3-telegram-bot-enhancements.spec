@@ -1,7 +1,7 @@
 spec: task
 name: "Telegram Bot API Enhancements — Streaming, Reply Threading, and UX"
 tags: [stage3, telegram, bot-api, streaming, ux]
-references: ["https://docs.openclaw.ai/channels/telegram"]
+references: ["https://docs.openclaw.ai/channels/telegram", "https://www.meta-intelligence.tech/insight-openclaw-telegram"]
 ---
 
 ## Intent
