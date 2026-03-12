@@ -4,6 +4,7 @@ use crate::data::chats::chat::ChatId;
 use crate::data::store::Store;
 use crate::shared::actions::ChatAction;
 use makepad_widgets::*;
+use moly_kit::prelude::*;
 
 live_design! {
     use link::theme::*;
@@ -42,10 +43,9 @@ live_design! {
 
         list = <PortalList> {
             drag_scrolling: false,
-            AgentHeading = <HeadingLabel> { text: "AGENTS" }
-            NoAgentsWarning = <NoAgentsWarning> {}
-            Agent = <EntityButton> {
-                server_url_visible: true,
+            BotsHeading = <HeadingLabel> { text: "BOTS" }
+            BotButton = <EntityButton> {
+                server_url_visible: false,
             }
             ChatsHeading = <HeadingLabel> { text: "CHATS", margin: {top: 10}, }
             ChatHistoryCard = <ChatHistoryCard> {
@@ -67,30 +67,54 @@ impl Widget for ChatHistory {
         self.widget_match_event(cx, event, scope);
     }
 
-    fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
+    fn draw_walk(
+        &mut self,
+        cx: &mut Cx2d,
+        scope: &mut Scope,
+        walk: Walk,
+    ) -> DrawStep {
         let store = scope.data.get_mut::<Store>().unwrap();
-        // let agents = store.chats.get_mofa_agents_list(true);
+
+        // Collect registered bots (native only)
+        #[cfg(not(target_arch = "wasm32"))]
+        let bot_entries: Vec<(BotId, String)> = store
+            .bot_server_state
+            .as_ref()
+            .and_then(|state| state.store.list_bots().ok())
+            .unwrap_or_default()
+            .into_iter()
+            // BotFather is always first, user bots follow
+            .map(|info| {
+                let bot_id = if info.username == "BotFather" {
+                    RouterClient::prefix("botfather", &BotId::new("botfather"))
+                } else {
+                    RouterClient::prefix(
+                        "telegram_bot",
+                        &BotId::new(&info.token),
+                    )
+                };
+                (bot_id, info.name)
+            })
+            .collect();
+
+        #[cfg(target_arch = "wasm32")]
+        let bot_entries: Vec<(BotId, String)> = Vec::new();
 
         enum Item<'a> {
+            BotsHeader,
+            BotButton(usize),
             ChatsHeader,
-            // AgentsHeader,
-            // NoAgentsWarning(&'a str),
-            // AgentButton(&'a ProviderBot),
             ChatButton(&'a ChatId),
         }
 
         let mut items: Vec<Item> = Vec::new();
 
-        // TODO: Temporarily disabling the agents section in the chat history.
-        // Reusing portal list items ids for different templates (e.g. a ChatsHeader becomes an AgentsHeader when agents are loaded after chats)
-        // causes drawlist issues: Drawlist id generation wrong index: 13 current gen:1 in pointer:0 / Drawlist id generation wrong 13 1 0
-
-        // if !agents.is_empty() {
-        //     items.push(Item::AgentsHeader);
-        //     for agent in &agents {
-        //         items.push(Item::AgentButton(agent));
-        //     }
-        // }
+        if !bot_entries.is_empty() {
+            items.push(Item::BotsHeader);
+            for i in 0..bot_entries.len() {
+                items.push(Item::BotButton(i));
+            }
+        }
 
         items.push(Item::ChatsHeader);
 
@@ -101,37 +125,58 @@ impl Widget for ChatHistory {
             .map(|c| c.borrow().id)
             .collect::<Vec<_>>();
 
-        // Reverse sort chat ids.
+        // Reverse sort chat ids (most recent first).
         chat_ids.sort_by(|a, b| b.cmp(a));
 
         items.extend(chat_ids.iter().map(Item::ChatButton));
 
-        while let Some(view_item) = self.deref.draw_walk(cx, scope, walk).step() {
-            if let Some(mut list) = view_item.as_portal_list().borrow_mut() {
+        while let Some(view_item) =
+            self.deref.draw_walk(cx, scope, walk).step()
+        {
+            if let Some(mut list) =
+                view_item.as_portal_list().borrow_mut()
+            {
                 list.set_item_range(cx, 0, items.len() - 1);
                 while let Some(item_id) = list.next_visible_item(cx) {
                     if item_id >= items.len() {
-                        // For some reason, if the range is < 5, the last item some times exceeds the range.
                         continue;
                     }
 
                     match &items[item_id] {
-                        Item::ChatsHeader => {
-                            let item = list.item(cx, item_id, live_id!(ChatsHeading));
+                        Item::BotsHeader => {
+                            let item = list.item(
+                                cx,
+                                item_id,
+                                live_id!(BotsHeading),
+                            );
                             item.draw_all(cx, scope);
                         }
-                        // Item::AgentsHeader => {
-                        //     let item = list.item(cx, item_id, live_id!(AgentHeading));
-                        //     item.draw_all(cx, scope);
-                        // }
-                        // Item::AgentButton(agent) => {
-                        //     let item = list.item(cx, item_id, live_id!(Agent));
-                        //     item.as_entity_button().set_bot_id(cx, &agent.id);
-                        //     item.draw_all(cx, scope);
-                        // }
+                        Item::BotButton(idx) => {
+                            let (bot_id, _name) = &bot_entries[*idx];
+                            let item = list.item(
+                                cx,
+                                item_id,
+                                live_id!(BotButton),
+                            );
+                            item.as_entity_button()
+                                .set_bot_id(cx, bot_id);
+                            item.draw_all(cx, scope);
+                        }
+                        Item::ChatsHeader => {
+                            let item = list.item(
+                                cx,
+                                item_id,
+                                live_id!(ChatsHeading),
+                            );
+                            item.draw_all(cx, scope);
+                        }
                         Item::ChatButton(chat_id) => {
                             let mut item = list
-                                .item(cx, item_id, live_id!(ChatHistoryCard))
+                                .item(
+                                    cx,
+                                    item_id,
+                                    live_id!(ChatHistoryCard),
+                                )
                                 .as_chat_history_card();
                             let _ = item.set_chat_id(**chat_id);
                             item.draw_all(cx, scope);

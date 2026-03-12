@@ -176,12 +176,16 @@ impl EntityButton {
         let mut avatar = self.chat_agent_avatar(ids!(agent_avatar));
         let server_url = self.label(ids!(server_url.label));
 
-        let bot = store.chats.get_bot_or_placeholder(&bot_id);
+        let bot = store.chats.get_bot(&bot_id);
 
-        let name = bot.human_readable_name();
-        name_label.set_text(cx, name);
+        name_label.set_text(cx, &store.get_bot_display_name(&bot_id));
 
         if store.chats.is_agent(&bot_id) {
+            let Some(bot) = bot else {
+                avatar.set_visible(false);
+                description_label.set_text(cx, "");
+                return;
+            };
             avatar.set_visible(true);
             avatar.set_bot(bot);
             description_label.set_text(cx, &bot.description);
