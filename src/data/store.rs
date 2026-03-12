@@ -86,6 +86,14 @@ pub struct Store {
     /// Handle to the running server; Drop triggers shutdown.
     #[cfg(not(target_arch = "wasm32"))]
     _bot_server_handle: Option<moly_kit::aitk::telegram_server::ServerHandle>,
+
+    /// Cached bot token → name mapping to avoid SQLite queries in draw paths.
+    #[cfg(not(target_arch = "wasm32"))]
+    bot_name_cache: std::collections::HashMap<String, String>,
+
+    /// Pre-computed sidebar entries (BotId, display_name) from the cache.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub bot_sidebar_cache: Vec<(BotId, String)>,
 }
 
 const MOLY_SERVER_VERSION_EXTENSION: &str = "/api/v1";
@@ -216,7 +224,14 @@ impl Store {
                 bot_server_state,
                 #[cfg(not(target_arch = "wasm32"))]
                 _bot_server_handle: bot_server_handle,
+                #[cfg(not(target_arch = "wasm32"))]
+                bot_name_cache: std::collections::HashMap::new(),
+                #[cfg(not(target_arch = "wasm32"))]
+                bot_sidebar_cache: Vec::new(),
             };
+
+            #[cfg(not(target_arch = "wasm32"))]
+            store.refresh_bot_name_cache();
 
             store.init_current_chat();
             store.sync_with_moly_server();
@@ -283,17 +298,48 @@ impl Store {
                 return "BotFather".to_string();
             }
 
-            if provider_id == "telegram_bot"
-                && let Some(state) = &self.bot_server_state
-                && let Ok(bots) = state.store.list_bots()
-                && let Some(bot) =
-                    bots.into_iter().find(|bot| bot.token == raw_bot_id.as_str())
-            {
-                return bot.name;
+            if provider_id == "telegram_bot" {
+                if let Some(name) = self.bot_name_cache.get(raw_bot_id.as_str())
+                {
+                    return name.clone();
+                }
             }
         }
 
         "Unknown".to_string()
+    }
+
+    /// Refreshes the in-memory bot caches from SQLite.
+    /// Call after bot creation, deletion, or rename operations.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn refresh_bot_name_cache(&mut self) {
+        self.bot_name_cache.clear();
+        self.bot_sidebar_cache.clear();
+
+        let Some(state) = &self.bot_server_state else {
+            return;
+        };
+        let Ok(bots) = state.store.list_bots() else {
+            return;
+        };
+
+        for bot in bots {
+            let bot_id = if bot.username == "BotFather" {
+                RouterClient::prefix(
+                    "botfather",
+                    &BotId::new("botfather"),
+                )
+            } else {
+                RouterClient::prefix(
+                    "telegram_bot",
+                    &BotId::new(&bot.token),
+                )
+            };
+            self.bot_sidebar_cache
+                .push((bot_id, bot.name.clone()));
+            self.bot_name_cache
+                .insert(bot.token, bot.name);
+        }
     }
 
     /// This function combines the search results information for a given model

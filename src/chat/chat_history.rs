@@ -4,7 +4,8 @@ use crate::data::chats::chat::ChatId;
 use crate::data::store::Store;
 use crate::shared::actions::ChatAction;
 use makepad_widgets::*;
-use moly_kit::prelude::*;
+#[cfg(target_arch = "wasm32")]
+use moly_kit::prelude::BotId;
 
 live_design! {
     use link::theme::*;
@@ -75,27 +76,9 @@ impl Widget for ChatHistory {
     ) -> DrawStep {
         let store = scope.data.get_mut::<Store>().unwrap();
 
-        // Collect registered bots (native only)
+        // Use cached bot entries to avoid SQLite queries in draw path
         #[cfg(not(target_arch = "wasm32"))]
-        let bot_entries: Vec<(BotId, String)> = store
-            .bot_server_state
-            .as_ref()
-            .and_then(|state| state.store.list_bots().ok())
-            .unwrap_or_default()
-            .into_iter()
-            // BotFather is always first, user bots follow
-            .map(|info| {
-                let bot_id = if info.username == "BotFather" {
-                    RouterClient::prefix("botfather", &BotId::new("botfather"))
-                } else {
-                    RouterClient::prefix(
-                        "telegram_bot",
-                        &BotId::new(&info.token),
-                    )
-                };
-                (bot_id, info.name)
-            })
-            .collect();
+        let bot_entries = store.bot_sidebar_cache.clone();
 
         #[cfg(target_arch = "wasm32")]
         let bot_entries: Vec<(BotId, String)> = Vec::new();
