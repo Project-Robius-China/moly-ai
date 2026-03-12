@@ -22,3 +22,25 @@ pub enum DownloadAction {
     Cancel(FileId),
     None,
 }
+
+/// Bridges async Telegram Bot API outbound events into Makepad's UI actions.
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Clone, DefaultNone, Debug)]
+pub enum BotOutboundAction {
+    MessageReceived {
+        bot_token: String,
+        message: Box<moly_kit::aitk::telegram_server::Message>,
+    },
+    MessageEdited {
+        bot_token: String,
+        message_id: i64,
+        new_text: String,
+        reply_markup:
+            Option<moly_kit::aitk::telegram_server::InlineKeyboardMarkup>,
+    },
+    MessageDeleted {
+        bot_token: String,
+        message_id: i64,
+    },
+    None,
+}

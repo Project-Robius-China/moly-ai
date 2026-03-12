@@ -201,6 +201,12 @@ impl ChatScreen {
                     ProviderType::BotFather => create_botfather_client(store),
                     #[cfg(target_arch = "wasm32")]
                     ProviderType::BotFather => None,
+                    #[cfg(not(target_arch = "wasm32"))]
+                    ProviderType::TelegramBot => {
+                        create_telegram_bot_client(store)
+                    }
+                    #[cfg(target_arch = "wasm32")]
+                    ProviderType::TelegramBot => None,
                 };
 
                 if let Some(client) = client {
@@ -260,7 +266,8 @@ fn has_valid_credentials(provider: &Provider) -> bool {
         | ProviderType::DeepInquire
         | ProviderType::OpenClaw
         | ProviderType::CrewRs
-        | ProviderType::BotFather => true,
+        | ProviderType::BotFather
+        | ProviderType::TelegramBot => true,
     }
 }
 
@@ -516,6 +523,18 @@ fn create_crewrs_client(
 fn create_botfather_client(store: &Store) -> Option<Box<dyn BotClient>> {
     let server_state = store.bot_server_state.clone()?;
     let client = crate::bot_manager::BotFatherClient::new(
+        server_state,
+        store.preferences.bot_server_port,
+    );
+    Some(Box::new(client))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn create_telegram_bot_client(
+    store: &Store,
+) -> Option<Box<dyn BotClient>> {
+    let server_state = store.bot_server_state.clone()?;
+    let client = crate::bot_manager::TelegramBotClient::new(
         server_state,
         store.preferences.bot_server_port,
     );

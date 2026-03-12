@@ -178,6 +178,7 @@ pub enum ProviderType {
     OpenClaw,
     CrewRs,
     BotFather,
+    TelegramBot,
 }
 
 impl ProviderType {
@@ -192,6 +193,7 @@ impl ProviderType {
             ProviderType::OpenClaw => "OpenClaw",
             ProviderType::CrewRs => "CrewRs",
             ProviderType::BotFather => "BotFather",
+            ProviderType::TelegramBot => "Telegram Bot",
         }
     }
 
@@ -205,6 +207,7 @@ impl ProviderType {
             ProviderType::OpenClaw
                 | ProviderType::CrewRs
                 | ProviderType::BotFather
+                | ProviderType::TelegramBot
         )
     }
 }
