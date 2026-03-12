@@ -44,7 +44,7 @@ live_design! {
 
         list = <PortalList> {
             drag_scrolling: false,
-            BotsHeading = <HeadingLabel> { text: "BOTS" }
+            BotsHeading = <HeadingLabel> { text: "BOTS", margin: {top: 10}, }
             BotButton = <EntityButton> {
                 server_url_visible: false,
             }

@@ -384,11 +384,24 @@ impl ChatView {
             return false;
         }
 
-        store
+        if store
             .chats
             .get_all_bots(true) // true = only enabled bots
             .iter()
             .any(|bot| &bot.id == bot_id)
+        {
+            return true;
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        if bot_id.as_str().starts_with("telegram_bot/") {
+            return store
+                .bot_sidebar_cache
+                .iter()
+                .any(|(cached_bot_id, _)| cached_bot_id == bot_id);
+        }
+
+        false
     }
 
     /// Clears unavailable bot from controller when provider is disabled.
@@ -932,5 +945,26 @@ impl Glue {
                 }
             });
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_is_bot_available_checks_dynamic_telegram_sidebar_bots() {
+        let source = include_str!("chat_view.rs");
+        let start = source
+            .find("fn is_bot_available")
+            .expect("is_bot_available should exist");
+        let end = source[start..]
+            .find("/// Clears unavailable bot from controller")
+            .map(|offset| start + offset)
+            .expect("clear_unavailable_bot should follow is_bot_available");
+        let is_bot_available = &source[start..end];
+
+        assert!(
+            is_bot_available.contains("bot_sidebar_cache"),
+            "Telegram bots listed only in the sidebar cache must count as available",
+        );
     }
 }
