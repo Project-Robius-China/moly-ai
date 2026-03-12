@@ -160,8 +160,13 @@ pub fn fetch_models_for_provider(provider: &Provider) {
             ));
         }
         ProviderType::TelegramBot => {
-            // TelegramBot models are discovered dynamically via
-            // TelegramBotClient::bots(), not fetched here.
+            // Bots are discovered dynamically via TelegramBotClient::bots()
+            // in the RouterClient, but we must post a result to complete the
+            // provider sync handshake (otherwise syncing never reaches Synced).
+            Cx::post_action(ProviderFetchModelsResult::Success(
+                provider_id,
+                vec![],
+            ));
         }
     }
 }
