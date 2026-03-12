@@ -330,12 +330,7 @@ impl Widget for ChatHistoryCard {
         }
 
         let caption = store.get_chat_associated_bot(self.chat_id).map(|bot_id| {
-            store
-                .chats
-                .available_bots
-                .get(&bot_id)
-                .map(|m| m.name.clone())
-                .unwrap_or("Unknown".to_string())
+            store.get_bot_display_name(&bot_id)
         });
         self.set_title_text(
             cx,
@@ -459,26 +454,26 @@ impl ChatHistoryCard {
     ) {
         for action in actions {
             match action.cast() {
-                ChatHistoryCardAction::MenuClosed(chat_id) => {
-                    if chat_id == self.chat_id {
-                        self.button(ids!(chat_options)).reset_hover(cx);
-                        self.moly_modal(ids!(chat_history_card_options_modal))
-                            .close(cx);
-                    }
+                ChatHistoryCardAction::MenuClosed(chat_id)
+                    if chat_id == self.chat_id =>
+                {
+                    self.button(ids!(chat_options)).reset_hover(cx);
+                    self.moly_modal(ids!(chat_history_card_options_modal))
+                        .close(cx);
                 }
-                ChatHistoryCardAction::ActivateTitleEdition(chat_id) => {
-                    if chat_id == self.chat_id {
-                        self.transition_title_state(cx);
-                    }
+                ChatHistoryCardAction::ActivateTitleEdition(chat_id)
+                    if chat_id == self.chat_id =>
+                {
+                    self.transition_title_state(cx);
                 }
-                ChatHistoryCardAction::DeleteChatOptionSelected(chat_id) => {
-                    if chat_id == self.chat_id {
-                        let mut delete_modal_inner =
-                            self.delete_chat_modal(ids!(delete_chat_modal_inner));
-                        delete_modal_inner.set_chat_id(self.chat_id);
+                ChatHistoryCardAction::DeleteChatOptionSelected(chat_id)
+                    if chat_id == self.chat_id =>
+                {
+                    let mut delete_modal_inner =
+                        self.delete_chat_modal(ids!(delete_chat_modal_inner));
+                    delete_modal_inner.set_chat_id(self.chat_id);
 
-                        self.moly_modal(ids!(delete_chat_modal)).open_as_dialog(cx);
-                    }
+                    self.moly_modal(ids!(delete_chat_modal)).open_as_dialog(cx);
                 }
                 _ => {}
             }

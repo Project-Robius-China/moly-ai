@@ -759,13 +759,13 @@ impl Messages {
 
         // Handle code copy
         // Since the Markdown widget could have multiple code blocks, we need the widget that triggered the action
-        if let Some(wa) = event.actions().widget_action(ids!(copy_code_button)) {
-            if let Some(text_to_copy) = wa.widgets.iter().find_map(|widget| {
+        if let Some(wa) = event.actions().widget_action(ids!(copy_code_button))
+            && let Some(text_to_copy) = wa.widgets.iter().find_map(|widget| {
                 let code_view = widget.widget(ids!(code_view));
                 (!code_view.is_empty()).then(|| code_view.as_code_view().text())
-            }) {
-                cx.copy_to_clipboard(&text_to_copy);
-            }
+            })
+        {
+            cx.copy_to_clipboard(&text_to_copy);
         }
     }
 
