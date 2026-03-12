@@ -7,6 +7,10 @@ preferences.json
 .DS_Store
 ignored/
 .claude
+.cowork
+.superpowers
+SKILLS.md
+doc/
 mdbook-admonish.css
 symlinks/
 
