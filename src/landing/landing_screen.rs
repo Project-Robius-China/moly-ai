@@ -111,12 +111,12 @@ impl WidgetMatchEvent for LandingScreen {
             }
 
             match action.cast() {
-                ModelListAction::ScrolledAtTop => {
-                    if self.search_bar_state == SearchBarState::CollapsedWithoutFilters {
-                        self.search_bar_state = SearchBarState::ExpandedWithoutFilters;
-                        self.search_bar(ids!(search_bar)).expand(cx);
-                        self.redraw(cx);
-                    }
+                ModelListAction::ScrolledAtTop
+                    if self.search_bar_state == SearchBarState::CollapsedWithoutFilters =>
+                {
+                    self.search_bar_state = SearchBarState::ExpandedWithoutFilters;
+                    self.search_bar(ids!(search_bar)).expand(cx);
+                    self.redraw(cx);
                 }
                 ModelListAction::ScrolledNotAtTop => {
                     let collapse: bool;
