@@ -37,7 +37,12 @@ impl TelegramBotClient {
             .map(|m| m.content.text.clone())
             .unwrap_or_default();
 
-        if let Some(callback_data) = user_text.strip_prefix("cb:") {
+        // Callback format: "cb:{source_message_id}:{callback_data}"
+        if let Some(cb_payload) = user_text.strip_prefix("cb:") {
+            let (source_msg_id, callback_data) = cb_payload
+                .split_once(':')
+                .unwrap_or(("0", cb_payload));
+
             let mut update = serde_json::json!({
                 "update_id": 0,
                 "callback_query": {
@@ -53,7 +58,7 @@ impl TelegramBotClient {
             });
 
             if let Some(source_message) =
-                Self::build_callback_source_message(messages, now)
+                Self::find_message_by_id(messages, source_msg_id, now)
             {
                 update["callback_query"]["message"] = source_message;
             }
@@ -80,21 +85,19 @@ impl TelegramBotClient {
         }
     }
 
-    fn build_callback_source_message(
+    /// Finds a bot message by its Telegram message_id (stored in `content.data`).
+    fn find_message_by_id(
         messages: &[Message],
+        message_id: &str,
         now: i64,
     ) -> Option<serde_json::Value> {
-        let last_user_index =
-            messages.iter().rposition(|message| message.from == EntityId::User)?;
-
-        messages[..last_user_index].iter().rev().find_map(|message| {
-            if !matches!(message.from, EntityId::Bot(_)) {
+        messages.iter().rev().find_map(|message| {
+            if message.content.data.as_deref() != Some(message_id) {
                 return None;
             }
-
-            let message_id = message.content.data.as_deref()?.parse::<i64>().ok()?;
+            let msg_id = message_id.parse::<i64>().ok()?;
             Some(serde_json::json!({
-                "message_id": message_id,
+                "message_id": msg_id,
                 "from": {
                     "id": 0,
                     "is_bot": true,
@@ -241,15 +244,31 @@ mod tests {
 
     #[test]
     fn test_build_update_json_for_callback_includes_source_message() {
+        // Format: cb:{source_message_id}:{callback_data}
         let update = TelegramBotClient::build_update_json(&[
             bot_message("42", "Pick one"),
-            user_message("cb:option-a"),
+            user_message("cb:42:option-a"),
         ]);
 
         assert_eq!(update["callback_query"]["data"], "option-a");
         assert_eq!(update["callback_query"]["message"]["message_id"], 42);
         assert_eq!(update["callback_query"]["message"]["text"], "Pick one");
         assert_eq!(update["callback_query"]["message"]["chat"]["id"], 1);
+    }
+
+    #[test]
+    fn test_callback_binds_to_correct_message_not_latest() {
+        // Bot sends message A (id=10, with buttons), then message B (id=11).
+        // User clicks button on A → should bind to A, not B.
+        let update = TelegramBotClient::build_update_json(&[
+            bot_message("10", "Pick one"),
+            bot_message("11", "Just a follow-up"),
+            user_message("cb:10:option-a"),
+        ]);
+
+        assert_eq!(update["callback_query"]["data"], "option-a");
+        assert_eq!(update["callback_query"]["message"]["message_id"], 10);
+        assert_eq!(update["callback_query"]["message"]["text"], "Pick one");
     }
 
     #[test]

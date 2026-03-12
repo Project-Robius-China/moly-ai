@@ -21,7 +21,7 @@ pub fn telegram_to_aitk_message(
     let quick_replies = msg
         .reply_markup
         .as_ref()
-        .map(inline_keyboard_to_quick_replies)
+        .map(|kb| inline_keyboard_to_quick_replies(kb, msg.message_id))
         .unwrap_or_default();
 
     Message {
@@ -38,16 +38,18 @@ pub fn telegram_to_aitk_message(
 }
 
 /// Flattens an `InlineKeyboardMarkup` into `QuickReplyButton`s.
-/// Callback data is prefixed with `cb:` to distinguish from regular text.
+/// Callback data is encoded as `cb:{message_id}:{callback_data}` so that
+/// the source message can be reliably identified when the button is clicked.
 pub fn inline_keyboard_to_quick_replies(
     kb: &InlineKeyboardMarkup,
+    message_id: i64,
 ) -> Vec<QuickReplyButton> {
     kb.inline_keyboard
         .iter()
         .flatten()
         .map(|btn| {
             let action = if let Some(cb) = &btn.callback_data {
-                format!("cb:{cb}")
+                format!("cb:{message_id}:{cb}")
             } else if let Some(url) = &btn.url {
                 url.clone()
             } else {
@@ -121,10 +123,10 @@ mod tests {
             ]],
         };
 
-        let replies = inline_keyboard_to_quick_replies(&kb);
+        let replies = inline_keyboard_to_quick_replies(&kb, 42);
         assert_eq!(replies.len(), 2);
         assert_eq!(replies[0].label, "Option A");
-        assert_eq!(replies[0].action, "cb:a");
+        assert_eq!(replies[0].action, "cb:42:a");
         assert_eq!(replies[1].label, "Visit");
         assert_eq!(replies[1].action, "https://example.com");
     }

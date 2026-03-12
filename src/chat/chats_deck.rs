@@ -200,8 +200,9 @@ impl ChatsDeck {
 
         match action.cast() {
             BotOutboundAction::MessageReceived {
-                bot_token, message
+                bot_token, message,
             } => {
+                store.refresh_bot_name_cache();
                 let bot_id = Self::bot_id_from_token(&bot_token);
                 let msg = message_adapter::telegram_to_aitk_message(
                     &message, &bot_id,
@@ -238,9 +239,11 @@ impl ChatsDeck {
                     return;
                 };
 
-                let quick_replies = reply_markup.as_ref().map(
-                    message_adapter::inline_keyboard_to_quick_replies,
-                ).unwrap_or_default();
+                let quick_replies = reply_markup.as_ref().map(|kb| {
+                    message_adapter::inline_keyboard_to_quick_replies(
+                        kb, message_id,
+                    )
+                }).unwrap_or_default();
 
                 let mut chat = chat.borrow_mut();
                 let msg_id_str = message_id.to_string();
