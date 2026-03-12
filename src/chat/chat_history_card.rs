@@ -454,9 +454,7 @@ impl ChatHistoryCard {
     ) {
         for action in actions {
             match action.cast() {
-                ChatHistoryCardAction::MenuClosed(chat_id)
-                    if chat_id == self.chat_id =>
-                {
+                ChatHistoryCardAction::MenuClosed(chat_id) if chat_id == self.chat_id => {
                     self.button(ids!(chat_options)).reset_hover(cx);
                     self.moly_modal(ids!(chat_history_card_options_modal))
                         .close(cx);

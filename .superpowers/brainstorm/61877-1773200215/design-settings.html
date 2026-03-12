@@ -1,0 +1,76 @@
+<h2>设计 Part 1: Settings 专属面板</h2>
+<p class="subtitle">BotFather 在 Provider Settings 中的专属视图</p>
+
+<div class="mockup">
+  <div class="mockup-header">BotFather Settings Panel（替换默认 provider_view）</div>
+  <div class="mockup-body" style="padding:1.5rem;font-size:0.85rem;max-width:600px;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">
+      <div style="width:56px;height:56px;background:linear-gradient(135deg,#4CAF50,#2E7D32);border-radius:14px;display:flex;align-items:center;justify-content:center;color:white;font-size:1.8rem;font-weight:bold;flex-shrink:0;">B</div>
+      <div>
+        <div style="font-size:1.3rem;font-weight:bold;">BotFather</div>
+        <div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.2rem;">
+          <div style="width:8px;height:8px;background:#4CAF50;border-radius:50%;"></div>
+          <span style="color:#4CAF50;font-size:0.8rem;">本地服务运行中 · 端口 8488</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Cards (使用 makepad-component Card) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin-bottom:1.5rem;">
+      <div style="background:#1a2332;border:1px solid #2a3a4a;border-radius:10px;padding:1rem;text-align:center;">
+        <div style="font-size:2rem;font-weight:bold;color:#4CAF50;">3</div>
+        <div style="color:#888;font-size:0.75rem;margin-top:0.2rem;">已创建 Bot</div>
+      </div>
+      <div style="background:#1a2332;border:1px solid #2a3a4a;border-radius:10px;padding:1rem;text-align:center;">
+        <div style="font-size:1rem;font-family:monospace;color:#aaa;margin-top:0.4rem;">localhost:8488</div>
+        <div style="color:#888;font-size:0.75rem;margin-top:0.3rem;">API 地址</div>
+      </div>
+    </div>
+
+    <!-- Quick Start Guide -->
+    <div style="background:#1a2332;border:1px solid #2a3a4a;border-radius:10px;padding:1.2rem;margin-bottom:1.2rem;">
+      <div style="font-weight:600;font-size:0.95rem;margin-bottom:0.8rem;">快速开始</div>
+      <div style="color:#bbb;font-size:0.82rem;line-height:1.8;">
+        <div style="display:flex;gap:0.5rem;margin-bottom:0.3rem;">
+          <span style="color:#4CAF50;font-weight:bold;flex-shrink:0;">1.</span>
+          <span>进入 <strong style="color:#fff;">Chat</strong> → 选择 <strong style="color:#fff;">BotFather</strong> 模型</span>
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-bottom:0.3rem;">
+          <span style="color:#4CAF50;font-weight:bold;flex-shrink:0;">2.</span>
+          <span>输入 <code style="background:#0d1117;padding:0.1rem 0.4rem;border-radius:3px;color:#4CAF50;">/newbot</code> 创建你的第一个 Bot</span>
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-bottom:0.3rem;">
+          <span style="color:#4CAF50;font-weight:bold;flex-shrink:0;">3.</span>
+          <span>获取 Token → 配置到 <strong style="color:#fff;">crew-rs</strong> 项目中</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Commands Reference -->
+    <div style="background:#1a2332;border:1px solid #2a3a4a;border-radius:10px;padding:1.2rem;">
+      <div style="font-weight:600;font-size:0.95rem;margin-bottom:0.8rem;">可用命令</div>
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:0.4rem 1rem;font-size:0.82rem;">
+        <code style="color:#4CAF50;">/newbot</code>  <span style="color:#aaa;">创建新 Bot</span>
+        <code style="color:#4CAF50;">/mybots</code>  <span style="color:#aaa;">管理已有 Bot</span>
+        <code style="color:#4CAF50;">/start</code>   <span style="color:#aaa;">查看欢迎信息</span>
+        <code style="color:#4CAF50;">/help</code>    <span style="color:#aaa;">获取帮助</span>
+        <code style="color:#4CAF50;">/cancel</code>  <span style="color:#aaa;">取消当前操作</span>
+      </div>
+    </div>
+
+    <!-- No API Host / API Key fields! -->
+    <div style="margin-top:1.2rem;padding:0.8rem;border:1px dashed #333;border-radius:8px;text-align:center;color:#555;font-size:0.75rem;">
+      ✅ 无需配置 API Host / API Key — BotFather 完全本地运行
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top:1.5rem;">技术实现方案</h3>
+<div style="font-size:0.85rem;color:#bbb;line-height:1.8;padding:0 0.5rem;">
+  <p><strong>新建文件：</strong> <code>src/settings/botfather_view.rs</code></p>
+  <p><strong>组件依赖：</strong> 使用 makepad-component 的 Card 组件做统计卡片和信息面板</p>
+  <p><strong>集成方式：</strong> 在 <code>provider_view.rs</code> 中检测 <code>ProviderType::BotFather</code>，切换渲染到 botfather_view</p>
+  <p><strong>数据源：</strong> Bot 数量通过 <code>store.bot_server_state.store.list_bots()</code> 查询；端口从 <code>store.preferences.bot_server_port</code> 读取</p>
+</div>

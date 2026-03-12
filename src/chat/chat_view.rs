@@ -694,34 +694,28 @@ impl Glue {
         }
     }
 
-    fn replicate_messages_mutation_to_store(&self, mutation: &VecMutation<Message>) {
-        let mutation = mutation.clone();
-
+    fn replicate_messages_mutation_to_store(&self, _mutation: &VecMutation<Message>) {
         self.ui.defer(move |chat_view, cx, scope| {
             let store = scope.data.get_mut::<Store>().unwrap();
 
             let Some(store_chat) = store.chats.get_chat_by_id(chat_view.chat_id) else {
                 return;
             };
+            let messages = chat_view
+                .chat(ids!(chat))
+                .read()
+                .chat_controller()
+                .map(|controller| controller.lock().unwrap().state().messages.clone());
 
-            let modified_first_message =
-                mutation
-                    .effects(&store_chat.borrow().messages)
-                    .any(|effect| match effect {
-                        VecEffect::Insert(index, _) | VecEffect::Update(index, _, _) => index == 0,
-                        VecEffect::Remove(_, _, _) => false,
-                    });
+            let Some(messages) = messages else {
+                return;
+            };
 
-            mutation.apply(&mut store_chat.borrow_mut().messages);
-
-            if modified_first_message {
-                store_chat
-                    .borrow_mut()
-                    .update_title_based_on_first_message();
+            {
+                let mut store_chat = store_chat.borrow_mut();
+                sync_store_chat_messages(&mut store_chat, &messages);
+                store_chat.save_and_forget();
             }
-
-            // Write to disk.
-            store_chat.borrow_mut().save_and_forget();
 
             #[cfg(not(target_arch = "wasm32"))]
             let should_refresh_bot_cache = store_chat
@@ -948,8 +942,46 @@ impl Glue {
     }
 }
 
+fn sync_store_chat_messages(store_chat: &mut crate::data::chats::chat::Chat, messages: &[Message]) {
+    store_chat.messages = messages.to_vec();
+    store_chat.update_title_based_on_first_message();
+}
+
 #[cfg(test)]
 mod tests {
+    use super::sync_store_chat_messages;
+    use crate::data::chats::chat::Chat;
+    use moly_kit::prelude::{Message, MessageContent};
+
+    fn text_message(text: &str) -> Message {
+        Message {
+            content: MessageContent {
+                text: text.to_string(),
+                ..Default::default()
+            },
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn sync_store_chat_messages_replaces_stale_store_snapshot() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "moly-chat-view-test-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&temp_dir).expect("create temp dir");
+        let mut store_chat = Chat::new(temp_dir);
+        store_chat.messages = vec![text_message("old"), text_message("snapshot")];
+
+        let controller_messages: Vec<Message> =
+            (0..26).map(|index| text_message(&format!("message {index}"))).collect();
+
+        sync_store_chat_messages(&mut store_chat, &controller_messages);
+
+        assert_eq!(store_chat.messages.len(), 26);
+        assert_eq!(store_chat.messages[25].content.text, "message 25");
+    }
+
     #[test]
     fn test_is_bot_available_checks_dynamic_telegram_sidebar_bots() {
         let source = include_str!("chat_view.rs");
