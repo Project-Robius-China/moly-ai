@@ -298,11 +298,10 @@ impl Store {
                 return "BotFather".to_string();
             }
 
-            if provider_id == "telegram_bot" {
-                if let Some(name) = self.bot_name_cache.get(raw_bot_id.as_str())
-                {
-                    return name.clone();
-                }
+            if provider_id == "telegram_bot"
+                && let Some(name) = self.bot_name_cache.get(raw_bot_id.as_str())
+            {
+                return name.clone();
             }
         }
 

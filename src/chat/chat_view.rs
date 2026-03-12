@@ -684,7 +684,7 @@ impl Glue {
     fn replicate_messages_mutation_to_store(&self, mutation: &VecMutation<Message>) {
         let mutation = mutation.clone();
 
-        self.ui.defer(move |chat_view, _, scope| {
+        self.ui.defer(move |chat_view, cx, scope| {
             let store = scope.data.get_mut::<Store>().unwrap();
 
             let Some(store_chat) = store.chats.get_chat_by_id(chat_view.chat_id) else {
@@ -709,6 +709,19 @@ impl Glue {
 
             // Write to disk.
             store_chat.borrow_mut().save_and_forget();
+
+            #[cfg(not(target_arch = "wasm32"))]
+            let should_refresh_bot_cache = store_chat
+                .borrow()
+                .associated_bot
+                .as_ref()
+                .is_some_and(|bot_id| bot_id.as_str().ends_with("/botfather"));
+
+            #[cfg(not(target_arch = "wasm32"))]
+            if should_refresh_bot_cache {
+                store.refresh_bot_name_cache();
+                cx.redraw_all();
+            }
 
             // Keep track of whether the message was updated while the chat view was inactive
             if !chat_view.focused {

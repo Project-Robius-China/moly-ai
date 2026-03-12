@@ -40,6 +40,7 @@ pub fn telegram_to_aitk_message(
 /// Flattens an `InlineKeyboardMarkup` into `QuickReplyButton`s.
 /// Callback data is encoded as `cb:{message_id}:{callback_data}` so that
 /// the source message can be reliably identified when the button is clicked.
+/// URL buttons are encoded as `open:{url}` so external navigation is explicit.
 pub fn inline_keyboard_to_quick_replies(
     kb: &InlineKeyboardMarkup,
     message_id: i64,
@@ -51,7 +52,7 @@ pub fn inline_keyboard_to_quick_replies(
             let action = if let Some(cb) = &btn.callback_data {
                 format!("cb:{message_id}:{cb}")
             } else if let Some(url) = &btn.url {
-                url.clone()
+                format!("open:{url}")
             } else {
                 btn.text.clone()
             };
@@ -128,6 +129,6 @@ mod tests {
         assert_eq!(replies[0].label, "Option A");
         assert_eq!(replies[0].action, "cb:42:a");
         assert_eq!(replies[1].label, "Visit");
-        assert_eq!(replies[1].action, "https://example.com");
+        assert_eq!(replies[1].action, "open:https://example.com");
     }
 }

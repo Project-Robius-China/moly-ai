@@ -393,7 +393,10 @@ impl MatchEvent for App {
                 _ => {}
             }
 
-            if let ChatAction::Start(_) = action.cast() {
+            if matches!(
+                action.cast(),
+                ChatAction::Start(_) | ChatAction::StartOrSelect(_)
+            ) {
                 let chat_radio_button = self.ui.radio_button(ids!(chat_tab));
                 chat_radio_button.select(cx, &mut Scope::empty());
             }

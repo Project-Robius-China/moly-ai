@@ -105,46 +105,10 @@ impl WidgetMatchEvent for ChatsDeck {
             // Handle chat start
             match action.cast() {
                 ChatAction::Start(bot_id) => {
-                    if let Some(chat_id) = store.chats.find_chat_for_bot(&bot_id) {
-                        store.chats.set_current_chat(Some(chat_id));
-
-                        if let Some(chat) = store.chats.get_chat_by_id(chat_id) {
-                            store
-                                .preferences
-                                .set_current_chat_model(chat.borrow().associated_bot.clone());
-                            self.create_or_update_chat_view(cx, &chat.borrow());
-                        }
-                        continue;
-                    }
-
-                    let chat_id = store.chats.create_empty_chat(Some(bot_id.clone()));
-
-                    // Pre-populate BotFather welcome or error message
-                    #[cfg(not(target_arch = "wasm32"))]
-                    if bot_id.as_str().ends_with("/botfather")
-                        && let Some(chat) = store.chats.get_chat_by_id(chat_id)
-                    {
-                        let content = if store.bot_server_state.is_some() {
-                            crate::bot_manager::BotFatherClient::welcome_message()
-                        } else {
-                            MessageContent {
-                                text: "BotFather server is not running. \
-                                       Please restart the application."
-                                    .to_string(),
-                                ..Default::default()
-                            }
-                        };
-                        chat.borrow_mut().messages.push(Message {
-                            from: EntityId::Bot(bot_id.clone()),
-                            content,
-                            ..Default::default()
-                        });
-                    }
-
-                    let chat = store.chats.get_chat_by_id(chat_id);
-                    if let Some(chat) = chat {
-                        self.create_or_update_chat_view(cx, &chat.borrow());
-                    }
+                    self.open_chat_for_bot(cx, store, &bot_id, false);
+                }
+                ChatAction::StartOrSelect(bot_id) => {
+                    self.open_chat_for_bot(cx, store, &bot_id, true);
                 }
                 ChatAction::StartWithoutEntity => {
                     let chat_id = store.chats.create_empty_chat(None);
@@ -202,7 +166,6 @@ impl ChatsDeck {
             BotOutboundAction::MessageReceived {
                 bot_token, message,
             } => {
-                store.refresh_bot_name_cache();
                 let bot_id = Self::bot_id_from_token(&bot_token);
                 let msg = message_adapter::telegram_to_aitk_message(
                     &message, &bot_id,
@@ -336,6 +299,56 @@ impl ChatsDeck {
 }
 
 impl ChatsDeck {
+    fn open_chat_for_bot(
+        &mut self,
+        cx: &mut Cx,
+        store: &mut Store,
+        bot_id: &BotId,
+        reuse_existing: bool,
+    ) {
+        if reuse_existing
+            && let Some(chat_id) = store.chats.find_chat_for_bot(bot_id)
+        {
+            store.chats.set_current_chat(Some(chat_id));
+
+            if let Some(chat) = store.chats.get_chat_by_id(chat_id) {
+                store
+                    .preferences
+                    .set_current_chat_model(chat.borrow().associated_bot.clone());
+                self.create_or_update_chat_view(cx, &chat.borrow());
+            }
+            return;
+        }
+
+        let chat_id = store.chats.create_empty_chat(Some(bot_id.clone()));
+
+        #[cfg(not(target_arch = "wasm32"))]
+        if bot_id.as_str().ends_with("/botfather")
+            && let Some(chat) = store.chats.get_chat_by_id(chat_id)
+        {
+            let content = if store.bot_server_state.is_some() {
+                crate::bot_manager::BotFatherClient::welcome_message()
+            } else {
+                MessageContent {
+                    text: "BotFather server is not running. \
+                           Please restart the application."
+                        .to_string(),
+                    ..Default::default()
+                }
+            };
+            chat.borrow_mut().messages.push(Message {
+                from: EntityId::Bot(bot_id.clone()),
+                content,
+                ..Default::default()
+            });
+            chat.borrow().save_and_forget();
+        }
+
+        if let Some(chat) = store.chats.get_chat_by_id(chat_id) {
+            self.create_or_update_chat_view(cx, &chat.borrow());
+        }
+    }
+
     pub fn create_or_update_chat_view(&mut self, cx: &mut Cx, chat_data: &ChatData) {
         // Check if an instance already exists for this chat
         if let Some(existing_view) = self.chat_view_refs.get_mut(&chat_data.id) {
@@ -411,5 +424,35 @@ impl ChatsDeck {
         }
 
         // TODO: Focus on prompt input
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_botfather_seed_message_is_persisted() {
+        let source = include_str!("chats_deck.rs");
+        assert!(
+            source.contains("chat.borrow().save_and_forget();"),
+            "BotFather seed message should be saved after insertion",
+        );
+    }
+
+    #[test]
+    fn test_message_received_does_not_refresh_bot_cache() {
+        let source = include_str!("chats_deck.rs");
+        let start = source
+            .find("BotOutboundAction::MessageReceived")
+            .expect("MessageReceived branch should exist");
+        let end = source[start..]
+            .find("BotOutboundAction::MessageEdited")
+            .map(|offset| start + offset)
+            .expect("MessageEdited branch should follow MessageReceived");
+        let message_received_block = &source[start..end];
+
+        assert!(
+            !message_received_block.contains("refresh_bot_name_cache"),
+            "MessageReceived should not rebuild the bot cache",
+        );
     }
 }
