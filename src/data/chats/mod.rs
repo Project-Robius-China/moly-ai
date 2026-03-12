@@ -112,6 +112,21 @@ impl Chats {
         self.saved_chats.iter().find(|c| c.borrow().id == chat_id)
     }
 
+    pub fn find_chat_for_bot(&self, bot_id: &BotId) -> Option<ChatId> {
+        self.saved_chats
+            .iter()
+            .filter_map(|chat| {
+                let chat = chat.borrow();
+                if chat.associated_bot.as_ref() == Some(bot_id) {
+                    Some((chat.id, chat.accessed_at))
+                } else {
+                    None
+                }
+            })
+            .max_by_key(|(_, accessed_at)| *accessed_at)
+            .map(|(chat_id, _)| chat_id)
+    }
+
     pub fn set_current_chat(&mut self, chat_id: Option<ChatId>) {
         self.current_chat_id = chat_id;
 
@@ -486,10 +501,25 @@ impl Chats {
         }
     }
 
-    pub fn get_bot_id_by_file_id(&self, file_id: &FileId) -> Option<BotId> {
+pub fn get_bot_id_by_file_id(&self, file_id: &FileId) -> Option<BotId> {
         self.available_bots
             .values()
             .find(|m| m.name == file_id.as_str())
             .map(|m| m.id.clone())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_find_chat_for_bot_returns_existing_chat_id() {
+        let mut chats = Chats::new(MolyClient::new("http://localhost".into()));
+        let bot_id = BotId::new("telegram_bot/token-1");
+        let chat_id = chats.create_empty_chat(Some(bot_id.clone()));
+
+        assert_eq!(chats.find_chat_for_bot(&bot_id), Some(chat_id));
+        assert_eq!(chats.find_chat_for_bot(&BotId::new("other")), None);
     }
 }

@@ -1,0 +1,71 @@
+[project]
+name = "moly-ai"
+
+[skills.global]
+enabled = [
+    "agent-spec-tool-first",
+    "agent-spec-estimate",
+    "agent-spec-authoring",
+]
+disabled = [
+    "peon-ping-log",
+    "peon-ping-toggle",
+    "peon-ping-use",
+    "peon-ping-config",
+    "generate-sow",
+    "xor-shader-techniques",
+    "agent-estimation",
+    "find-skills",
+    "makepad-screenshot",
+    "superpowers",
+]
+
+[skills.install.safety-net]
+path = "/Users/zhaoyue/.claude/plugins/cache/cc-marketplace/safety-net/0.7.1"
+plugin = true
+
+[skills.install.rust-analyzer-lsp]
+path = "/Users/zhaoyue/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0"
+plugin = true
+
+[skills.install.superpowers]
+path = "/Users/zhaoyue/.claude/plugins/cache/superpowers-marketplace/superpowers/5.0.1"
+plugin = true
+
+[skills.install.context-mode]
+path = "/Users/zhaoyue/.claude/plugins/cache/claude-context-mode/context-mode/0.8.1"
+plugin = true
+
+[skills.install.claude-hud]
+path = "/Users/zhaoyue/.claude/plugins/cache/claude-hud/claude-hud/0.0.7"
+plugin = true
+
+[skills.install.document-skills]
+path = "/Users/zhaoyue/.claude/plugins/cache/anthropic-agent-skills/document-skills/unknown"
+plugin = true
+
+[skills.dev.xor-shader-techniques]
+path = "../../.agents/skills/xor-shader-techniques"
+local = false
+
+[skills.dev.agent-estimation]
+path = "../../.agents/skills/agent-estimation"
+local = false
+
+[skills.dev.find-skills]
+path = "../../.agents/skills/find-skills"
+local = false
+
+[skills.dev.makepad-screenshot]
+path = "../../.agents/skills/makepad-screenshot"
+local = false
+
+[skills.groups]
+
+[triggers]
+
+[security]
+require_lockfile = false
+verify_checksums = false
+show_update_diff = false
+auto_reject_high_risk = false

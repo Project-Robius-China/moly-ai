@@ -113,8 +113,7 @@ impl Search {
                     .sort_by_key(|model| std::cmp::Reverse(model.download_count));
             }
             SortCriteria::LeastDownloads => {
-                self.models
-                    .sort_by_key(|model| model.download_count);
+                self.models.sort_by_key(|model| model.download_count);
             }
             SortCriteria::MostLikes => {
                 self.models

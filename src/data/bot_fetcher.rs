@@ -152,11 +152,20 @@ pub fn fetch_models_for_provider(provider: &Provider) {
                 vec![ProviderBot {
                     id: bot_id,
                     name: "BotFather".to_string(),
-                    description: "创建和管理 Bot".to_string(),
+                    description: "Create and manage bots".to_string(),
                     provider_id,
                     enabled: true,
                     is_recommended: false,
                 }],
+            ));
+        }
+        ProviderType::TelegramBot => {
+            // Bots are discovered dynamically via TelegramBotClient::bots()
+            // in the RouterClient, but we must post a result to complete the
+            // provider sync handshake (otherwise syncing never reaches Synced).
+            Cx::post_action(ProviderFetchModelsResult::Success(
+                provider_id,
+                vec![],
             ));
         }
     }

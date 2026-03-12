@@ -19,20 +19,31 @@ interactions, media message rendering, and Bot connection status display.
 - Inline keyboard button clicks send a callback_query type update
 - Media messages (images, documents, etc.) must be rendered correctly in chat
 
-## Decided
+## Decisions
 
 - Bot list is displayed in the chat sidebar; BotFather is pinned first, the rest sorted by last active time
 - Connection status indicator: green dot = online, gray dot = offline, shown next to the Bot avatar
 - Inline keyboard rendered as button rows; clicking sends callback_data
 - Messages sent by the user are constructed as Telegram Update objects containing a Message structure
 
-## Boundary
+## Boundaries
 
-### Allowed to Modify
-- src/bot_manager/** (extend)
-- src/chat/** (add Bot chat routing and message adaptation)
-- src/data/bots.rs (extend)
-- src/app_state.rs (add Bot connection status tracking)
+### Allowed Changes
+- src/bot_manager/mod.rs
+- src/bot_manager/telegram_bot_client.rs
+- src/bot_manager/message_adapter.rs
+- src/chat/chats_deck.rs
+- src/chat/chat_history.rs
+- src/chat/chat_history_card.rs
+- src/chat/chat_screen.rs
+- src/chat/entity_button.rs
+- src/data/store.rs
+- src/data/providers.rs
+- src/data/bot_fetcher.rs
+- src/data/chats/mod.rs
+- src/shared/actions.rs
+- src/settings/add_provider_modal.rs
+- specs/stage2-task5-bot-chat-integration.spec
 
 ### Forbidden
 - Do not rewrite the MolyKit Chat widget
@@ -118,3 +129,10 @@ Scenario: Chat history is restored after app restart
   Given Bot "Weather Assistant" has "10" historical messages stored in SQLite
   When the Moly app restarts and opens the "Weather Assistant" chat
   Then "10" historical messages are displayed
+
+Scenario: Sending message to deleted bot shows error
+  Test: test_send_message_to_deleted_bot
+  Given a Bot "Weather Assistant" existed but was deleted via BotFather
+  When the user tries to send a message in the "Weather Assistant" chat
+  Then the message is not sent
+  And the chat view shows an error indicating the bot no longer exists

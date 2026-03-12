@@ -1,0 +1,159 @@
+<h2>Design Part 2: Chat Interface + MolyKit Extension</h2>
+<p class="subtitle">BotFather welcome experience and action buttons in chat</p>
+
+<!-- Section 1: Welcome Message -->
+<h3>2A. Auto Welcome Message</h3>
+<p class="subtitle">Sent automatically when user opens a BotFather chat</p>
+
+<div class="mockup">
+  <div class="mockup-header">Chat — BotFather Welcome (auto-sent on first open)</div>
+  <div class="mockup-body" style="padding:1.5rem;font-size:0.85rem;max-width:550px;">
+
+    <!-- Bot welcome message -->
+    <div style="display:flex;gap:0.6rem;margin-bottom:1.2rem;">
+      <div style="width:36px;height:36px;background:linear-gradient(135deg,#4CAF50,#2E7D32);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;flex-shrink:0;font-size:0.9rem;">B</div>
+      <div style="flex:1;">
+        <div style="font-weight:600;color:#4CAF50;margin-bottom:0.4rem;font-size:0.8rem;">BotFather</div>
+        <div style="background:#1a2332;border-radius:0 10px 10px 10px;padding:1rem;color:#ddd;font-size:0.82rem;line-height:1.7;">
+          Welcome to <strong style="color:#fff;">BotFather</strong>! I can help you create and manage bots.<br><br>
+          Available commands:<br>
+          <code style="color:#4CAF50;">/newbot</code> — Create a new bot<br>
+          <code style="color:#4CAF50;">/mybots</code> — Manage your bots<br>
+          <code style="color:#4CAF50;">/help</code> — Show help
+        </div>
+
+        <!-- Action Buttons (NEW MolyKit feature) -->
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.6rem;">
+          <div style="background:#1a3a2a;border:1px solid #4CAF50;border-radius:8px;padding:0.45rem 1rem;color:#4CAF50;font-size:0.78rem;cursor:pointer;transition:all 0.15s;">Create a Bot</div>
+          <div style="background:#1a2a3a;border:1px solid #2196F3;border-radius:8px;padding:0.45rem 1rem;color:#2196F3;font-size:0.78rem;cursor:pointer;">My Bots</div>
+          <div style="background:#1e1e2e;border:1px solid #666;border-radius:8px;padding:0.45rem 1rem;color:#aaa;font-size:0.78rem;cursor:pointer;">Help</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prompt Input -->
+    <div style="background:#2a2a2a;border:1px solid #444;border-radius:8px;padding:0.7rem;color:#666;font-size:0.8rem;margin-top:1rem;">
+      Type a command to get started... (e.g. /newbot)
+    </div>
+  </div>
+</div>
+
+<!-- Section 2: Action Buttons in MolyKit -->
+<h3 style="margin-top:2rem;">2B. MolyKit Action Buttons (New Widget)</h3>
+<p class="subtitle">Generic, reusable — any BotClient can return action buttons</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">AITK Protocol Extension</div>
+    <div class="mockup-body" style="padding:1rem;font-size:0.78rem;font-family:monospace;color:#ccc;line-height:1.7;">
+      <span style="color:#888;">// aitk::protocol::MessageContent</span><br>
+      <span style="color:#c792ea;">pub struct</span> <span style="color:#82aaff;">MessageContent</span> {<br>
+      &nbsp;&nbsp;<span style="color:#888;">// ... existing fields ...</span><br>
+      &nbsp;&nbsp;<span style="color:#f07178;">pub</span> text: <span style="color:#ffcb6b;">String</span>,<br>
+      &nbsp;&nbsp;<span style="color:#f07178;">pub</span> citations: <span style="color:#ffcb6b;">Vec&lt;String&gt;</span>,<br>
+      &nbsp;&nbsp;<span style="color:#888;">// NEW:</span><br>
+      &nbsp;&nbsp;<span style="color:#f07178;">pub</span> <span style="color:#4CAF50;">action_buttons</span>: <span style="color:#ffcb6b;">Vec&lt;ActionButton&gt;</span>,<br>
+      }<br><br>
+      <span style="color:#c792ea;">pub struct</span> <span style="color:#82aaff;">ActionButton</span> {<br>
+      &nbsp;&nbsp;<span style="color:#f07178;">pub</span> label: <span style="color:#ffcb6b;">String</span>,<br>
+      &nbsp;&nbsp;<span style="color:#f07178;">pub</span> action: <span style="color:#ffcb6b;">String</span>,<br>
+      &nbsp;&nbsp;<span style="color:#f07178;">pub</span> style: <span style="color:#ffcb6b;">ButtonStyle</span>,<br>
+      }<br><br>
+      <span style="color:#c792ea;">pub enum</span> <span style="color:#82aaff;">ButtonStyle</span> {<br>
+      &nbsp;&nbsp;Primary,<br>
+      &nbsp;&nbsp;Secondary,<br>
+      &nbsp;&nbsp;Subtle,<br>
+      }
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Rendering Pipeline</div>
+    <div class="mockup-body" style="padding:1rem;font-size:0.82rem;color:#ccc;line-height:1.8;">
+      <strong style="color:#fff;">Data Flow:</strong><br>
+      <div style="padding:0.5rem 0;">
+        <code style="color:#4CAF50;">BotFatherClient::send()</code><br>
+        &nbsp;&nbsp;↓ yields MessageContent with action_buttons<br><br>
+        <code style="color:#2196F3;">StandardMessageContent</code><br>
+        &nbsp;&nbsp;↓ detects non-empty action_buttons<br>
+        &nbsp;&nbsp;↓ renders ActionButtonGroup below text<br><br>
+        <code style="color:#ff9800;">ActionButtonGroup (new widget)</code><br>
+        &nbsp;&nbsp;↓ user clicks "Create a Bot"<br>
+        &nbsp;&nbsp;↓ dispatches ActionButtonClicked { action: "/newbot" }<br><br>
+        <code style="color:#e91e63;">Chat widget</code><br>
+        &nbsp;&nbsp;↓ handles action, injects "/newbot" as user message<br>
+        &nbsp;&nbsp;↓ sends to BotFatherClient for processing
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Section 3: Interaction Example -->
+<h3 style="margin-top:2rem;">2C. Full Interaction Flow</h3>
+<p class="subtitle">User clicks "Create a Bot" button → treated as /newbot input</p>
+
+<div class="mockup">
+  <div class="mockup-header">Chat — After clicking "Create a Bot"</div>
+  <div class="mockup-body" style="padding:1.5rem;font-size:0.85rem;max-width:550px;">
+
+    <!-- Welcome (collapsed) -->
+    <div style="display:flex;gap:0.6rem;margin-bottom:0.8rem;opacity:0.6;">
+      <div style="width:32px;height:32px;background:#2E7D32;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;flex-shrink:0;font-size:0.8rem;">B</div>
+      <div style="background:#1a2332;border-radius:0 8px 8px 8px;padding:0.6rem;color:#999;font-size:0.78rem;flex:1;">
+        Welcome to BotFather! ...
+      </div>
+    </div>
+
+    <!-- User message (injected from button click) -->
+    <div style="display:flex;gap:0.6rem;margin-bottom:0.8rem;justify-content:flex-end;">
+      <div style="background:#1a3a2a;border-radius:10px 0 10px 10px;padding:0.6rem 1rem;color:#4CAF50;font-size:0.82rem;">
+        /newbot
+      </div>
+      <div style="width:32px;height:32px;background:#555;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;flex-shrink:0;font-size:0.8rem;">U</div>
+    </div>
+
+    <!-- Bot response -->
+    <div style="display:flex;gap:0.6rem;margin-bottom:0.8rem;">
+      <div style="width:32px;height:32px;background:#2E7D32;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;flex-shrink:0;font-size:0.8rem;">B</div>
+      <div style="background:#1a2332;border-radius:0 8px 8px 8px;padding:0.8rem;color:#ddd;font-size:0.82rem;flex:1;line-height:1.6;">
+        Alright, a new bot. Please choose a name for your bot.
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div style="background:#2a2a2a;border:1px solid #4CAF50;border-radius:8px;padding:0.7rem;color:#aaa;font-size:0.8rem;">
+      Enter a name for your bot...
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top:2rem;">Implementation Summary</h3>
+<div style="font-size:0.85rem;color:#bbb;line-height:1.8;padding:0 0.5rem;">
+  <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:0.5rem;color:#888;">Layer</td>
+      <td style="padding:0.5rem;color:#888;">Changes</td>
+      <td style="padding:0.5rem;color:#888;">Files</td>
+    </tr>
+    <tr style="border-bottom:1px solid #222;">
+      <td style="padding:0.5rem;color:#4CAF50;">AITK</td>
+      <td style="padding:0.5rem;">Add ActionButton + ButtonStyle to MessageContent</td>
+      <td style="padding:0.5rem;font-family:monospace;font-size:0.75rem;">protocol.rs</td>
+    </tr>
+    <tr style="border-bottom:1px solid #222;">
+      <td style="padding:0.5rem;color:#2196F3;">MolyKit</td>
+      <td style="padding:0.5rem;">New ActionButtonGroup widget, integrate into StandardMessageContent</td>
+      <td style="padding:0.5rem;font-family:monospace;font-size:0.75rem;">action_button_group.rs, standard_message_content.rs, chat.rs</td>
+    </tr>
+    <tr style="border-bottom:1px solid #222;">
+      <td style="padding:0.5rem;color:#ff9800;">Moly App</td>
+      <td style="padding:0.5rem;">New botfather_view.rs for Settings; welcome message in dialog.rs; BotFatherClient returns action_buttons</td>
+      <td style="padding:0.5rem;font-family:monospace;font-size:0.75rem;">botfather_view.rs, dialog.rs, client.rs, provider_view.rs</td>
+    </tr>
+    <tr>
+      <td style="padding:0.5rem;color:#e91e63;">makepad-component</td>
+      <td style="padding:0.5rem;">Use Card component in botfather_view.rs</td>
+      <td style="padding:0.5rem;font-family:monospace;font-size:0.75rem;">Cargo.toml (dependency)</td>
+    </tr>
+  </table>
+</div>

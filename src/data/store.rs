@@ -86,6 +86,14 @@ pub struct Store {
     /// Handle to the running server; Drop triggers shutdown.
     #[cfg(not(target_arch = "wasm32"))]
     _bot_server_handle: Option<moly_kit::aitk::telegram_server::ServerHandle>,
+
+    /// Cached bot token → name mapping to avoid SQLite queries in draw paths.
+    #[cfg(not(target_arch = "wasm32"))]
+    bot_name_cache: std::collections::HashMap<String, String>,
+
+    /// Pre-computed sidebar entries (BotId, display_name) from the cache.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub bot_sidebar_cache: Vec<(BotId, String)>,
 }
 
 const MOLY_SERVER_VERSION_EXTENSION: &str = "/api/v1";
@@ -139,32 +147,55 @@ impl Store {
                         );
 
                         spawn(async move {
+                            use crate::shared::actions::BotOutboundAction;
                             use futures::StreamExt as _;
                             while let Some(event) = outbound_rx.next().await {
-                                match &event {
-                                    OutboundEvent::SendMessage { chat_id, .. } => {
-                                        ::log::info!(
-                                            "[bot-outbound] SendMessage to chat {chat_id}",
+                                match event {
+                                    OutboundEvent::SendMessage {
+                                        bot_token,
+                                        chat_id: _chat_id,
+                                        message,
+                                    } => {
+                                        ::log::info!("[bot-outbound] SendMessage");
+                                        Cx::post_action(
+                                            BotOutboundAction::MessageReceived {
+                                                bot_token,
+                                                message: Box::new(message),
+                                            },
                                         );
                                     }
                                     OutboundEvent::EditMessage {
-                                        chat_id,
+                                        bot_token,
+                                        chat_id: _chat_id,
                                         message_id,
-                                        ..
+                                        new_text,
+                                        reply_markup,
                                     } => {
                                         ::log::info!(
-                                            "[bot-outbound] EditMessage chat={chat_id} \
-                                             msg={message_id}",
+                                            "[bot-outbound] EditMessage msg={message_id}",
+                                        );
+                                        Cx::post_action(
+                                            BotOutboundAction::MessageEdited {
+                                                bot_token,
+                                                message_id,
+                                                new_text,
+                                                reply_markup,
+                                            },
                                         );
                                     }
                                     OutboundEvent::DeleteMessage {
-                                        chat_id,
+                                        bot_token,
+                                        chat_id: _chat_id,
                                         message_id,
-                                        ..
                                     } => {
                                         ::log::info!(
-                                            "[bot-outbound] DeleteMessage chat={chat_id} \
-                                             msg={message_id}",
+                                            "[bot-outbound] DeleteMessage msg={message_id}",
+                                        );
+                                        Cx::post_action(
+                                            BotOutboundAction::MessageDeleted {
+                                                bot_token,
+                                                message_id,
+                                            },
                                         );
                                     }
                                 }
@@ -193,7 +224,14 @@ impl Store {
                 bot_server_state,
                 #[cfg(not(target_arch = "wasm32"))]
                 _bot_server_handle: bot_server_handle,
+                #[cfg(not(target_arch = "wasm32"))]
+                bot_name_cache: std::collections::HashMap::new(),
+                #[cfg(not(target_arch = "wasm32"))]
+                bot_sidebar_cache: Vec::new(),
             };
+
+            #[cfg(not(target_arch = "wasm32"))]
+            store.refresh_bot_name_cache();
 
             store.init_current_chat();
             store.sync_with_moly_server();
@@ -246,6 +284,61 @@ impl Store {
         self.chats
             .get_chat_by_id(chat_id)
             .and_then(|chat| chat.borrow().associated_bot.clone())
+    }
+
+    pub fn get_bot_display_name(&self, bot_id: &BotId) -> String {
+        if let Some(bot) = self.chats.get_bot(bot_id) {
+            return bot.human_readable_name().to_string();
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some((provider_id, raw_bot_id)) = RouterClient::unprefix(bot_id)
+        {
+            if provider_id == "botfather" {
+                return "BotFather".to_string();
+            }
+
+            if provider_id == "telegram_bot"
+                && let Some(name) = self.bot_name_cache.get(raw_bot_id.as_str())
+            {
+                return name.clone();
+            }
+        }
+
+        "Unknown".to_string()
+    }
+
+    /// Refreshes the in-memory bot caches from SQLite.
+    /// Call after bot creation, deletion, or rename operations.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn refresh_bot_name_cache(&mut self) {
+        self.bot_name_cache.clear();
+        self.bot_sidebar_cache.clear();
+
+        let Some(state) = &self.bot_server_state else {
+            return;
+        };
+        let Ok(bots) = state.store.list_bots() else {
+            return;
+        };
+
+        for bot in bots {
+            let bot_id = if bot.username == "BotFather" {
+                RouterClient::prefix(
+                    "botfather",
+                    &BotId::new("botfather"),
+                )
+            } else {
+                RouterClient::prefix(
+                    "telegram_bot",
+                    &BotId::new(&bot.token),
+                )
+            };
+            self.bot_sidebar_cache
+                .push((bot_id, bot.name.clone()));
+            self.bot_name_cache
+                .insert(bot.token, bot.name);
+        }
     }
 
     /// This function combines the search results information for a given model
@@ -476,7 +569,7 @@ impl Store {
             self.chats.providers.insert(provider.id.clone(), provider);
         }
 
-        // Auto-register the BotFather provider (native only, requires server)
+        // Auto-register bot providers (native only, requires server)
         #[cfg(not(target_arch = "wasm32"))]
         if self.bot_server_state.is_some() {
             let botfather_id = "botfather".to_string();
@@ -487,6 +580,31 @@ impl Store {
                     url: String::new(),
                     api_key: None,
                     provider_type: ProviderType::BotFather,
+                    connection_status: ProviderConnectionStatus::Connected,
+                    enabled: true,
+                    models: vec![],
+                    was_customly_added: false,
+                    system_prompt: None,
+                    tools_enabled: false,
+                };
+                self.chats.providers.insert(
+                    provider.id.clone(),
+                    provider.clone(),
+                );
+                self.chats.register_provider(
+                    provider,
+                    &mut self.provider_syncing_status,
+                );
+            }
+
+            let telegram_bot_id = "telegram_bot".to_string();
+            if !self.chats.providers.contains_key(&telegram_bot_id) {
+                let provider = Provider {
+                    id: telegram_bot_id,
+                    name: "Telegram Bot".to_string(),
+                    url: String::new(),
+                    api_key: None,
+                    provider_type: ProviderType::TelegramBot,
                     connection_status: ProviderConnectionStatus::Connected,
                     enabled: true,
                     models: vec![],

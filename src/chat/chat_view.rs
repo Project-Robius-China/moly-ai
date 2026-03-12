@@ -384,11 +384,24 @@ impl ChatView {
             return false;
         }
 
-        store
+        if store
             .chats
             .get_all_bots(true) // true = only enabled bots
             .iter()
             .any(|bot| &bot.id == bot_id)
+        {
+            return true;
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        if bot_id.as_str().starts_with("telegram_bot/") {
+            return store
+                .bot_sidebar_cache
+                .iter()
+                .any(|(cached_bot_id, _)| cached_bot_id == bot_id);
+        }
+
+        false
     }
 
     /// Clears unavailable bot from controller when provider is disabled.
@@ -682,7 +695,7 @@ impl Glue {
     }
 
     fn replicate_messages_mutation_to_store(&self, _mutation: &VecMutation<Message>) {
-        self.ui.defer(move |chat_view, _, scope| {
+        self.ui.defer(move |chat_view, cx, scope| {
             let store = scope.data.get_mut::<Store>().unwrap();
 
             let Some(store_chat) = store.chats.get_chat_by_id(chat_view.chat_id) else {
@@ -702,6 +715,19 @@ impl Glue {
                 let mut store_chat = store_chat.borrow_mut();
                 sync_store_chat_messages(&mut store_chat, &messages);
                 store_chat.save_and_forget();
+            }
+
+            #[cfg(not(target_arch = "wasm32"))]
+            let should_refresh_bot_cache = store_chat
+                .borrow()
+                .associated_bot
+                .as_ref()
+                .is_some_and(|bot_id| bot_id.as_str().ends_with("/botfather"));
+
+            #[cfg(not(target_arch = "wasm32"))]
+            if should_refresh_bot_cache {
+                store.refresh_bot_name_cache();
+                cx.redraw_all();
             }
 
             // Keep track of whether the message was updated while the chat view was inactive
@@ -954,5 +980,23 @@ mod tests {
 
         assert_eq!(store_chat.messages.len(), 26);
         assert_eq!(store_chat.messages[25].content.text, "message 25");
+    }
+
+    #[test]
+    fn test_is_bot_available_checks_dynamic_telegram_sidebar_bots() {
+        let source = include_str!("chat_view.rs");
+        let start = source
+            .find("fn is_bot_available")
+            .expect("is_bot_available should exist");
+        let end = source[start..]
+            .find("/// Clears unavailable bot from controller")
+            .map(|offset| start + offset)
+            .expect("clear_unavailable_bot should follow is_bot_available");
+        let is_bot_available = &source[start..end];
+
+        assert!(
+            is_bot_available.contains("bot_sidebar_cache"),
+            "Telegram bots listed only in the sidebar cache must count as available",
+        );
     }
 }
