@@ -110,17 +110,18 @@ impl Search {
         match criteria {
             SortCriteria::MostDownloads => {
                 self.models
-                    .sort_by(|a, b| b.download_count.cmp(&a.download_count));
+                    .sort_by_key(|model| std::cmp::Reverse(model.download_count));
             }
             SortCriteria::LeastDownloads => {
                 self.models
-                    .sort_by(|a, b| a.download_count.cmp(&b.download_count));
+                    .sort_by_key(|model| model.download_count);
             }
             SortCriteria::MostLikes => {
-                self.models.sort_by(|a, b| b.like_count.cmp(&a.like_count));
+                self.models
+                    .sort_by_key(|model| std::cmp::Reverse(model.like_count));
             }
             SortCriteria::LeastLikes => {
-                self.models.sort_by(|a, b| a.like_count.cmp(&b.like_count));
+                self.models.sort_by_key(|model| model.like_count);
             }
         }
         self.sorted_by = criteria;

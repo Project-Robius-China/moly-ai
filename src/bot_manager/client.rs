@@ -126,20 +126,6 @@ impl BotClient for BotFatherClient {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_botfather_welcome_message() {
-        let content = BotFatherClient::welcome_message();
-        assert!(content.text.contains("Welcome to BotFather"));
-        assert!(content.text.contains("/newbot"));
-        assert!(content.text.contains("/mybots"));
-        assert!(content.quick_replies.is_empty());
-    }
-}
-
 /// Heuristic to detect if input is a bot selection (number or @username).
 fn is_bot_selection(input: &str) -> bool {
     let trimmed = input.trim();
@@ -157,4 +143,18 @@ fn is_bot_selection(input: &str) -> bool {
         return true;
     }
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_botfather_welcome_message() {
+        let content = BotFatherClient::welcome_message();
+        assert!(content.text.contains("Welcome to BotFather"));
+        assert!(content.text.contains("/newbot"));
+        assert!(content.text.contains("/mybots"));
+        assert!(content.quick_replies.is_empty());
+    }
 }
