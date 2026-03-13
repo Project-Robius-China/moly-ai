@@ -214,7 +214,7 @@ live_design! {
                 }
             }
 
-            botfather_content = <BotFatherView> {}
+            botfather_content = <BotFatherView> { visible: false }
 
             api_fields_group = <View> {
                 width: Fill, height: Fit
@@ -917,13 +917,12 @@ impl ProviderViewRef {
             // Show/hide BotFather custom view vs API fields
             #[cfg(not(target_arch = "wasm32"))]
             {
-                let is_botfather =
-                    provider.provider_type == ProviderType::BotFather;
+                let is_botfather = provider.provider_type == ProviderType::BotFather;
                 inner
                     .view(ids!(api_fields_group))
                     .set_visible(cx, !is_botfather);
                 inner
-                    .view(ids!(botfather_content))
+                    .bot_father_view(ids!(botfather_content))
                     .set_visible(cx, is_botfather);
             }
 

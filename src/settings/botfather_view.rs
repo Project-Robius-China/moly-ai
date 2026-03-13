@@ -8,47 +8,59 @@ live_design! {
     use crate::shared::widgets::*;
 
     BOTFATHER_GREEN = #4CAF50
-    BOTFATHER_CARD_BG = #f5f5f5
+    BOTFATHER_CARD_BG = #FCFCFC
+    BOTFATHER_STAT_CARD_BG = #FFFFFF
 
-    StatCard = <RoundedView> {
+    SectionPanel = <RoundedShadowView> {
         width: Fill, height: Fit
         padding: 16
+        margin: {top: 12}
         draw_bg: {
             color: (BOTFATHER_CARD_BG)
-            border_radius: 10.0
+            border_radius: 4.5,
+            uniform shadow_color: #0002
+            shadow_radius: 8.0,
+            shadow_offset: vec2(0.0,-1.5)
         }
         flow: Down
-        align: {x: 0.5}
+
+        panel_title = <Label> {
+            margin: {bottom: 4}
+            draw_text: {
+                text_style: <BOLD_FONT>{font_size: 12}
+                color: #222222
+            }
+        }
+    }
+
+    StatCard = <RoundedShadowView> {
+        width: Fill, height: 92
+        padding: {top: 14, right: 14, bottom: 14, left: 14}
+        draw_bg: {
+            color: (BOTFATHER_STAT_CARD_BG)
+            border_radius: 4.5,
+            uniform shadow_color: #0002
+            shadow_radius: 8.0,
+            shadow_offset: vec2(0.0,-1.5)
+        }
+        flow: Down
+        spacing: 4
+        align: {x: 0.5, y: 0.5}
+        stat_label = <Label> {
+            draw_text: {
+                text_style: {font_size: 9}
+                color: #888888
+            }
+        }
         stat_value = <Label> {
             draw_text: {
                 text_style: <BOLD_FONT>{font_size: 18}
                 color: (BOTFATHER_GREEN)
             }
         }
-        stat_label = <Label> {
-            margin: {top: 4}
-            draw_text: {
-                text_style: {font_size: 9}
-                color: #888888
-            }
-        }
     }
 
-    InfoPanel = <RoundedView> {
-        width: Fill, height: Fit
-        padding: 16
-        margin: {top: 12}
-        draw_bg: {
-            color: (BOTFATHER_CARD_BG)
-            border_radius: 10.0
-        }
-        flow: Down
-        panel_title = <Label> {
-            draw_text: {
-                text_style: <BOLD_FONT>{font_size: 12}
-                color: #222222
-            }
-        }
+    InfoPanel = <SectionPanel> {
         panel_content = <Label> {
             margin: {top: 8}
             width: Fill
@@ -60,11 +72,62 @@ live_design! {
         }
     }
 
+    GuideStepRow = <View> {
+        width: Fill, height: Fit
+        flow: Right
+        spacing: 8
+        align: {y: 0.0}
+
+        step_index = <Label> {
+            width: 18, height: Fit
+            draw_text: {
+                text_style: <BOLD_FONT>{font_size: 10}
+                color: #555555
+            }
+        }
+
+        step_text = <Label> {
+            width: Fill, height: Fit
+            draw_text: {
+                text_style: {font_size: 10}
+                color: #555555
+                wrap: Word
+            }
+        }
+    }
+
+    CommandRow = <View> {
+        visible: false
+        width: Fill, height: Fit
+        flow: Right
+        spacing: 10
+        align: {y: 0.0}
+
+        command_name = <Label> {
+            width: 88, height: Fit
+            draw_text: {
+                text_style: <BOLD_FONT>{font_size: 9.5}
+                color: #444444
+            }
+        }
+
+        command_description = <Label> {
+            width: Fill, height: Fit
+            draw_text: {
+                text_style: {
+                    font_size: 9.5
+                    line_spacing: 1.25
+                }
+                color: #555555
+                wrap: Word
+            }
+        }
+    }
+
     pub BotFatherView = {{BotFatherView}} {
         width: Fill, height: Fit
         flow: Down
         padding: {top: 16, left: 0, right: 0}
-        visible: false
 
         // Status indicator
         status_row = <View> {
@@ -72,6 +135,7 @@ live_design! {
             flow: Right
             align: {y: 0.5}
             spacing: 6
+            margin: {left: 2}
             status_dot = <RoundedView> {
                 width: 8, height: 8
                 draw_bg: {
@@ -94,18 +158,12 @@ live_design! {
             flow: Right
             spacing: 10
             margin: {top: 16}
-            <StatCard> {
-                bot_count_value = <Label> {
-                    draw_text: {
-                        text_style: <BOLD_FONT>{font_size: 18}
-                        color: (BOTFATHER_GREEN)
-                    }
-                    text: "0"
-                }
+            bot_count_card = <StatCard> {
+                stat_value = { text: "0" }
                 stat_label = { text: "Bots Created" }
             }
-            <StatCard> {
-                api_address_value = <Label> {
+            api_address_card = <StatCard> {
+                stat_value = <Label> {
                     draw_text: {
                         text_style: <REGULAR_FONT>{font_size: 11}
                         color: #666666
@@ -117,20 +175,10 @@ live_design! {
         }
 
         // Server Configuration
-        config_section = <View> {
-            width: Fill, height: Fit
-            flow: Down
-            margin: {top: 16}
+        config_section = <SectionPanel> {
+            panel_title = { text: "Server Configuration" }
 
-            config_title = <Label> {
-                draw_text: {
-                    text_style: <BOLD_FONT>{font_size: 12}
-                    color: #222222
-                }
-                text: "Server Configuration"
-            }
-
-            <View> {
+            port_row = <View> {
                 width: Fill, height: Fit
                 flow: Right
                 align: {y: 0.5}
@@ -154,13 +202,26 @@ live_design! {
                     }
                     text: "8488"
                 }
+
+                save_port_button = <MolyButton> {
+                    width: Fit
+                    height: 30
+                    padding: {left: 18, right: 18, top: 0, bottom: 0}
+                    text: "Save"
+                    draw_bg: {
+                        color: #4a90d9
+                        border_size: 0
+                    }
+                }
             }
 
             port_hint = <Label> {
-                margin: {top: 4}
+                margin: {top: 6}
+                width: Fill
                 draw_text: {
                     text_style: {font_size: 9}
                     color: #999999
+                    wrap: Word
                 }
                 text: "Server will be restarted with the new port"
             }
@@ -169,9 +230,9 @@ live_design! {
                 visible: false
                 width: Fill
                 flow: Down
+                margin: {top: 4}
 
                 port_status = <Label> {
-                    margin: {top: 4}
                     width: Fill
                     draw_text: {
                         text_style: {font_size: 9}
@@ -182,40 +243,47 @@ live_design! {
                 }
             }
 
-            save_port_button = <MolyButton> {
-                margin: {top: 8}
-                width: Fit
-                height: 30
-                padding: {left: 20, right: 20, top: 0, bottom: 0}
-                text: "Save"
-                draw_bg: {
-                    color: #4a90d9
-                    border_size: 0
-                }
-            }
         }
 
         // Quick start guide
-        guide_panel = <InfoPanel> {
+        guide_panel = <SectionPanel> {
             panel_title = { text: "Quick Start" }
-            panel_content = {
-                text: "1. Go to Chat → Select BotFather model\n\
-                       2. Type /newbot to create your first bot\n\
-                       3. Get the token → Configure in crew-rs"
+            steps = <View> {
+                width: Fill, height: Fit
+                flow: Down
+                spacing: 6
+                margin: {top: 8}
+
+                <GuideStepRow> {
+                    step_index = { text: "1." }
+                    step_text = { text: "Go to Chat and select the BotFather model" }
+                }
+                <GuideStepRow> {
+                    step_index = { text: "2." }
+                    step_text = { text: "Type /newbot to create your first bot" }
+                }
+                <GuideStepRow> {
+                    step_index = { text: "3." }
+                    step_text = { text: "Copy the token and configure it in crew-rs" }
+                }
             }
         }
 
         // Command reference (text set at runtime from COMMAND_LIST)
-        commands_panel = <InfoPanel> {
+        commands_panel = <SectionPanel> {
             panel_title = { text: "Available Commands" }
-            commands_content = <Label> {
+            commands_list = <View> {
+                width: Fill, height: Fit
+                flow: Down
+                spacing: 6
                 margin: {top: 8}
-                width: Fill
-                draw_text: {
-                    text_style: {font_size: 10}
-                    color: #555555
-                    wrap: Word
-                }
+
+                command_row_1 = <CommandRow> {}
+                command_row_2 = <CommandRow> {}
+                command_row_3 = <CommandRow> {}
+                command_row_4 = <CommandRow> {}
+                command_row_5 = <CommandRow> {}
+                command_row_6 = <CommandRow> {}
             }
         }
 
@@ -271,9 +339,9 @@ impl BotFatherView {
         server_port: u16,
         command_list: &str,
     ) {
-        self.label(ids!(bot_count_value))
+        self.label(ids!(bot_count_card.stat_value))
             .set_text(cx, &bot_count.to_string());
-        self.label(ids!(api_address_value))
+        self.label(ids!(api_address_card.stat_value))
             .set_text(cx, &format!("localhost:{server_port}"));
         let port_input = self.text_input(ids!(port_input));
         if should_sync_port_input(
@@ -287,8 +355,62 @@ impl BotFatherView {
         } else if port_input.text() == server_port.to_string() {
             self.last_synced_port = Some(server_port);
         }
-        self.label(ids!(commands_content))
-            .set_text(cx, command_list);
+        self.set_command_rows(cx, parse_command_list(command_list));
+    }
+
+    fn set_command_rows(
+        &mut self,
+        cx: &mut Cx,
+        commands: Vec<(&str, &str)>,
+    ) {
+        self.set_command_row(
+            cx,
+            ids!(commands_panel.commands_list.command_row_1),
+            commands.first().copied(),
+        );
+        self.set_command_row(
+            cx,
+            ids!(commands_panel.commands_list.command_row_2),
+            commands.get(1).copied(),
+        );
+        self.set_command_row(
+            cx,
+            ids!(commands_panel.commands_list.command_row_3),
+            commands.get(2).copied(),
+        );
+        self.set_command_row(
+            cx,
+            ids!(commands_panel.commands_list.command_row_4),
+            commands.get(3).copied(),
+        );
+        self.set_command_row(
+            cx,
+            ids!(commands_panel.commands_list.command_row_5),
+            commands.get(4).copied(),
+        );
+        self.set_command_row(
+            cx,
+            ids!(commands_panel.commands_list.command_row_6),
+            commands.get(5).copied(),
+        );
+    }
+
+    fn set_command_row(
+        &mut self,
+        cx: &mut Cx,
+        row: &[LiveId],
+        command: Option<(&str, &str)>,
+    ) {
+        let row_view = self.view(row);
+        if let Some((name, description)) = command {
+            row_view.set_visible(cx, true);
+            row_view.label(ids!(command_name)).set_text(cx, name);
+            row_view
+                .label(ids!(command_description))
+                .set_text(cx, description);
+        } else {
+            row_view.set_visible(cx, false);
+        }
     }
 
     fn set_port_status(
@@ -313,6 +435,17 @@ impl BotFatherView {
         let status = self.label(ids!(port_status));
         status.set_text(cx, "");
     }
+}
+
+fn parse_command_list(command_list: &str) -> Vec<(&str, &str)> {
+    command_list
+        .lines()
+        .filter_map(|line| {
+            let line = line.trim().strip_prefix("- ")?;
+            let (name, description) = line.split_once(" — ")?;
+            Some((name.trim_matches('`'), description.trim()))
+        })
+        .collect()
 }
 
 impl WidgetMatchEvent for BotFatherView {
