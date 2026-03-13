@@ -1,11 +1,7 @@
 use super::chat_history_card::ChatHistoryCardWidgetRefExt;
-use crate::chat::entity_button::EntityButtonWidgetRefExt;
 use crate::data::chats::chat::ChatId;
 use crate::data::store::Store;
-use crate::shared::actions::ChatAction;
 use makepad_widgets::*;
-#[cfg(target_arch = "wasm32")]
-use moly_kit::prelude::BotId;
 
 live_design! {
     use link::theme::*;
@@ -15,7 +11,6 @@ live_design! {
     use crate::shared::styles::*;
     use crate::shared::widgets::*;
     use crate::chat::chat_history_card::ChatHistoryCard;
-    use crate::chat::entity_button::*;
 
     HeadingLabel = <Label> {
         margin: {left: 4, bottom: 4},
@@ -44,10 +39,6 @@ live_design! {
 
         list = <PortalList> {
             drag_scrolling: false,
-            BotsHeading = <HeadingLabel> { text: "BOTS", margin: {top: 10}, }
-            BotButton = <EntityButton> {
-                server_url_visible: false,
-            }
             ChatsHeading = <HeadingLabel> { text: "CHATS", margin: {top: 10}, }
             ChatHistoryCard = <ChatHistoryCard> {
                 cursor: Default
@@ -65,7 +56,6 @@ pub struct ChatHistory {
 impl Widget for ChatHistory {
     fn handle_event(&mut self, cx: &mut Cx, event: &Event, scope: &mut Scope) {
         self.deref.handle_event(cx, event, scope);
-        self.widget_match_event(cx, event, scope);
     }
 
     fn draw_walk(
@@ -76,30 +66,12 @@ impl Widget for ChatHistory {
     ) -> DrawStep {
         let store = scope.data.get_mut::<Store>().unwrap();
 
-        // Use cached bot entries to avoid SQLite queries in draw path
-        #[cfg(not(target_arch = "wasm32"))]
-        let bot_entries = store.bot_sidebar_cache.clone();
-
-        #[cfg(target_arch = "wasm32")]
-        let bot_entries: Vec<(BotId, String)> = Vec::new();
-
         enum Item<'a> {
-            BotsHeader,
-            BotButton(usize),
             ChatsHeader,
             ChatButton(&'a ChatId),
         }
 
-        let mut items: Vec<Item> = Vec::new();
-
-        if !bot_entries.is_empty() {
-            items.push(Item::BotsHeader);
-            for i in 0..bot_entries.len() {
-                items.push(Item::BotButton(i));
-            }
-        }
-
-        items.push(Item::ChatsHeader);
+        let mut items: Vec<Item> = vec![Item::ChatsHeader];
 
         let mut chat_ids = store
             .chats
@@ -126,25 +98,6 @@ impl Widget for ChatHistory {
                     }
 
                     match &items[item_id] {
-                        Item::BotsHeader => {
-                            let item = list.item(
-                                cx,
-                                item_id,
-                                live_id!(BotsHeading),
-                            );
-                            item.draw_all(cx, scope);
-                        }
-                        Item::BotButton(idx) => {
-                            let (bot_id, _name) = &bot_entries[*idx];
-                            let item = list.item(
-                                cx,
-                                item_id,
-                                live_id!(BotButton),
-                            );
-                            item.as_entity_button()
-                                .set_bot_id(cx, bot_id);
-                            item.draw_all(cx, scope);
-                        }
                         Item::ChatsHeader => {
                             let item = list.item(
                                 cx,
@@ -170,23 +123,5 @@ impl Widget for ChatHistory {
         }
 
         DrawStep::done()
-    }
-}
-
-impl WidgetMatchEvent for ChatHistory {
-    fn handle_actions(&mut self, cx: &mut Cx, actions: &Actions, _scope: &mut Scope) {
-        let clicked_entity_button = self
-            .portal_list(ids!(list))
-            .items_with_actions(actions)
-            .iter()
-            .map(|(_, item)| item.as_entity_button())
-            .find(|eb| eb.clicked(actions));
-
-        if let Some(entity_button) = clicked_entity_button {
-            let bot_id = entity_button.get_bot_id();
-            if let Some(bot_id) = bot_id {
-                cx.action(ChatAction::StartOrSelect(bot_id));
-            }
-        }
     }
 }

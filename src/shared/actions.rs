@@ -11,6 +11,7 @@ pub enum ChatAction {
     // Start a new chat with a given entity
     Start(BotId),
     // Select the existing chat for a given entity, or create one if it does not exist yet
+    #[allow(dead_code)]
     StartOrSelect(BotId),
     // Select a chat from the chat history
     ChatSelected(ChatId),

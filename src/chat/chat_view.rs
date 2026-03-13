@@ -394,11 +394,9 @@ impl ChatView {
         }
 
         #[cfg(not(target_arch = "wasm32"))]
-        if bot_id.as_str().starts_with("telegram_bot/") {
-            return store
-                .bot_sidebar_cache
-                .iter()
-                .any(|(cached_bot_id, _)| cached_bot_id == bot_id);
+        if let Some(token) = bot_id.as_str().strip_prefix("telegram_bot/")
+        {
+            return store.is_bot_token_known(token);
         }
 
         false
@@ -983,20 +981,58 @@ mod tests {
     }
 
     #[test]
-    fn test_is_bot_available_checks_dynamic_telegram_sidebar_bots() {
+    fn test_sidebar_has_no_bot_section() {
+        let source = include_str!("chat_history.rs");
+        assert!(
+            !source.contains("BotsHeading")
+                && !source.contains("BotButton"),
+            "Sidebar must not contain BOTS heading or bot entries",
+        );
+        assert!(
+            source.contains("ChatsHeading"),
+            "Sidebar must still render CHATS heading",
+        );
+    }
+
+    #[test]
+    fn test_bot_sidebar_cache_removed() {
+        let source = include_str!("../data/store.rs");
+        assert!(
+            !source.contains("bot_sidebar_cache"),
+            "bot_sidebar_cache must be fully removed from Store",
+        );
+    }
+
+    #[test]
+    fn test_telegram_bot_still_available() {
         let source = include_str!("chat_view.rs");
         let start = source
             .find("fn is_bot_available")
             .expect("is_bot_available should exist");
         let end = source[start..]
-            .find("/// Clears unavailable bot from controller")
+            .find("/// Clears unavailable bot")
             .map(|offset| start + offset)
-            .expect("clear_unavailable_bot should follow is_bot_available");
-        let is_bot_available = &source[start..end];
+            .expect("method after is_bot_available should exist");
+        let is_bot_available_fn = &source[start..end];
 
         assert!(
-            is_bot_available.contains("bot_sidebar_cache"),
-            "Telegram bots listed only in the sidebar cache must count as available",
+            is_bot_available_fn.contains("is_bot_token_known"),
+            "is_bot_available must use bot_name_cache via \
+             is_bot_token_known for telegram bots",
+        );
+        assert!(
+            is_bot_available_fn
+                .contains("strip_prefix(\"telegram_bot/\")"),
+            "is_bot_available must strip the telegram_bot/ prefix",
+        );
+    }
+
+    #[test]
+    fn test_entity_button_module_exists() {
+        let source = include_str!("mod.rs");
+        assert!(
+            source.contains("pub mod entity_button"),
+            "entity_button module must still be declared",
         );
     }
 }
