@@ -165,6 +165,18 @@ live_design! {
                 text: "Server will be restarted with the new port"
             }
 
+            port_status = <Label> {
+                visible: false
+                width: Fill
+                margin: {top: 4}
+                draw_text: {
+                    text_style: {font_size: 9}
+                    color: #999999
+                    wrap: Word
+                }
+                text: ""
+            }
+
             save_port_button = <MolyButton> {
                 margin: {top: 8}
                 width: Fit
@@ -218,6 +230,10 @@ live_design! {
 pub struct BotFatherView {
     #[deref]
     deref: View,
+    #[rust]
+    port_input_dirty: bool,
+    #[rust]
+    last_synced_port: Option<u16>,
 }
 
 impl Widget for BotFatherView {
@@ -254,10 +270,43 @@ impl BotFatherView {
             .set_text(cx, &bot_count.to_string());
         self.label(ids!(api_address_value))
             .set_text(cx, &format!("localhost:{server_port}"));
-        self.text_input(ids!(port_input))
-            .set_text(cx, &server_port.to_string());
+        let port_input = self.text_input(ids!(port_input));
+        if should_sync_port_input(
+            self.port_input_dirty,
+            self.last_synced_port,
+            &port_input.text(),
+            server_port,
+        ) {
+            port_input.set_text(cx, &server_port.to_string());
+            self.last_synced_port = Some(server_port);
+        } else if port_input.text() == server_port.to_string() {
+            self.last_synced_port = Some(server_port);
+        }
         self.label(ids!(commands_content))
             .set_text(cx, command_list);
+    }
+
+    fn set_port_status(
+        &mut self,
+        cx: &mut Cx,
+        message: &str,
+        color: Vec4,
+    ) {
+        let status = self.label(ids!(port_status));
+        status.set_text(cx, message);
+        status.apply_over(
+            cx,
+            live! {
+                visible: true,
+                draw_text: { color: (color) }
+            },
+        );
+    }
+
+    fn clear_port_status(&mut self, cx: &mut Cx) {
+        let status = self.label(ids!(port_status));
+        status.set_text(cx, "");
+        status.apply_over(cx, live! { visible: false });
     }
 }
 
@@ -268,15 +317,41 @@ impl WidgetMatchEvent for BotFatherView {
         actions: &Actions,
         _scope: &mut Scope,
     ) {
+        let port_input = self.text_input(ids!(port_input));
+        if port_input.changed(actions).is_some() {
+            self.port_input_dirty = true;
+            self.clear_port_status(cx);
+        }
+
         if self.button(ids!(save_port_button)).clicked(actions) {
-            let port_text = self.text_input(ids!(port_input)).text();
+            let port_text = port_input.text();
             if let Ok(port) = port_text.parse::<u16>()
                 && port > 0
             {
+                self.port_input_dirty = false;
+                port_input.set_text(cx, &port.to_string());
                 cx.action(BotFatherAction::SavePort(port));
+            } else {
+                self.set_port_status(
+                    cx,
+                    "Enter a valid port between 1 and 65535.",
+                    vec4(0.77, 0.16, 0.2, 1.0),
+                );
             }
         }
     }
+}
+
+fn should_sync_port_input(
+    port_input_dirty: bool,
+    last_synced_port: Option<u16>,
+    current_text: &str,
+    server_port: u16,
+) -> bool {
+    !port_input_dirty
+        && current_text != server_port.to_string()
+        && last_synced_port
+            .is_none_or(|port| current_text == port.to_string())
 }
 
 impl BotFatherViewRef {
@@ -292,6 +367,17 @@ impl BotFatherViewRef {
             inner.set_data(cx, bot_count, server_port, command_list);
         }
     }
+
+    pub fn set_port_status(
+        &mut self,
+        cx: &mut Cx,
+        message: &str,
+        color: Vec4,
+    ) {
+        if let Some(mut inner) = self.borrow_mut() {
+            inner.set_port_status(cx, message, color);
+        }
+    }
 }
 
 /// Actions emitted by the BotFather settings panel.
@@ -300,4 +386,39 @@ pub enum BotFatherAction {
     /// User saved a new server port value.
     SavePort(u16),
     None,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_sync_port_input;
+
+    #[test]
+    fn clean_port_input_tracks_server_port() {
+        assert!(should_sync_port_input(
+            false,
+            Some(8488),
+            "8488",
+            9494,
+        ));
+    }
+
+    #[test]
+    fn dirty_port_input_keeps_user_edit() {
+        assert!(!should_sync_port_input(
+            true,
+            Some(8488),
+            "9494",
+            8488,
+        ));
+    }
+
+    #[test]
+    fn pending_saved_port_is_not_replaced_by_stale_port() {
+        assert!(!should_sync_port_input(
+            false,
+            Some(8488),
+            "9494",
+            8488,
+        ));
+    }
 }

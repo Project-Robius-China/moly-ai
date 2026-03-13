@@ -35,6 +35,13 @@ pub enum StoreAction {
     None,
 }
 
+#[derive(Clone, DefaultNone, Debug)]
+pub enum BotServerAction {
+    Restarted(u16),
+    RestartFailed { port: u16, message: String },
+    None,
+}
+
 #[derive(Clone, Debug)]
 pub struct FileWithDownloadInfo {
     pub file: File,
@@ -338,12 +345,9 @@ impl Store {
             OutboundEvent, ServerConfig, TelegramBotApiServer,
         };
 
-        // Save new port to preferences.
-        self.preferences.bot_server_port = new_port;
-        self.preferences.save();
-
-        // Drop old handle to trigger graceful shutdown.
-        self._bot_server_handle = None;
+        if self.preferences.bot_server_port == new_port {
+            return;
+        }
 
         let data_dir = {
             use directories::ProjectDirs;
@@ -423,13 +427,21 @@ impl Store {
 
                     app_runner().defer(move |app, _, _| {
                         let store = app.store.as_mut().unwrap();
+                        store.preferences.bot_server_port = new_port;
+                        store.preferences.save();
                         store.bot_server_state = Some(state);
                         store._bot_server_handle = Some(handle);
                         store.refresh_bot_name_cache();
+                        store.reload_bot_context();
+                        Cx::post_action(BotServerAction::Restarted(new_port));
                     });
                 }
                 Err(e) => {
                     ::log::error!("Failed to restart bot server: {e}");
+                    Cx::post_action(BotServerAction::RestartFailed {
+                        port: new_port,
+                        message: e.to_string(),
+                    });
                 }
             }
         });

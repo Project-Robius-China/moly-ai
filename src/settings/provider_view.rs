@@ -5,7 +5,7 @@ use crate::settings::botfather_view::{BotFatherAction, BotFatherViewWidgetExt};
 
 use crate::data::{
     providers::{Provider, ProviderBot, ProviderConnectionStatus, ProviderType},
-    store::Store,
+    store::{BotServerAction, Store},
 };
 
 live_design! {
@@ -696,6 +696,17 @@ impl ProviderView {
             },
         );
     }
+
+    fn set_botfather_port_status(
+        &mut self,
+        cx: &mut Cx,
+        message: &str,
+        color: Vec4,
+    ) {
+        self.bot_father_view(ids!(botfather_content))
+            .set_port_status(cx, message, color);
+        self.redraw(cx);
+    }
 }
 
 impl WidgetMatchEvent for ProviderView {
@@ -753,14 +764,41 @@ impl WidgetMatchEvent for ProviderView {
                 }
         }
 
-        // Handle BotFather port save
         for action in actions {
             if let BotFatherAction::SavePort(port) = action.cast() {
                 #[cfg(not(target_arch = "wasm32"))]
-                {
+                if port == store.preferences.bot_server_port {
+                    self.set_botfather_port_status(
+                        cx,
+                        "Server is already using this port.",
+                        vec4(0.4, 0.4, 0.4, 1.0),
+                    );
+                } else {
+                    self.set_botfather_port_status(
+                        cx,
+                        &format!("Restarting server on port {port}..."),
+                        vec4(0.3, 0.3, 0.3, 1.0),
+                    );
                     store.restart_bot_server(port);
-                    self.redraw(cx);
                 }
+            }
+
+            match action.cast() {
+                BotServerAction::Restarted(port) => {
+                    self.set_botfather_port_status(
+                        cx,
+                        &format!("Server restarted on localhost:{port}."),
+                        vec4(0.0, 0.576, 0.314, 1.0),
+                    );
+                }
+                BotServerAction::RestartFailed { port, message } => {
+                    self.set_botfather_port_status(
+                        cx,
+                        &format!("Failed to restart on port {port}: {message}"),
+                        vec4(0.77, 0.16, 0.2, 1.0),
+                    );
+                }
+                BotServerAction::None => {}
             }
         }
 
