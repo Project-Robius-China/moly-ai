@@ -36,7 +36,7 @@ and the remaining integration verification.
 ## Out of Scope
 
 - WebSocket protocol support (Stage 1 Task 3)
-- SSE integration with crew-rs (Stage 1 Task 2)
+- SSE integration with Octos (Stage 1 Task 2)
 - Image/audio and other multimodal inputs
 - Streaming usage data parsing (only sending parameters)
 

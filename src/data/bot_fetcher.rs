@@ -120,11 +120,11 @@ pub fn fetch_models_for_provider(provider: &Provider) {
                 None,
             );
         }
-        ProviderType::CrewRs => {
+        ProviderType::Octos => {
             fetch_models_with_client(
                 provider_id.clone(),
                 move || {
-                    let mut client = crate::data::crewrs_client::CrewRsClient::new(url);
+                    let mut client = crate::data::octos_client::OctosClient::new(url);
                     if let Some(key) = api_key {
                         let _ = client.set_key(&key);
                     }
@@ -133,7 +133,7 @@ pub fn fetch_models_for_provider(provider: &Provider) {
                 move |bot| ProviderBot {
                     id: bot.id.clone(),
                     name: bot.name.clone(),
-                    description: "CrewRs multi-agent assistant".to_string(),
+                    description: "Octos multi-agent assistant".to_string(),
                     provider_id: provider_id.clone(),
                     enabled: true,
                     is_recommended: false,

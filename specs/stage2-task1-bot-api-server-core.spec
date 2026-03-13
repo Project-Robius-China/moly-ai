@@ -6,7 +6,7 @@ tags: [stage2, aitk, telegram-api, server]
 ## Intent
 
 Implement a Telegram Bot API-compatible HTTP server core module in AITK. This server receives
-long-polling requests from teloxide clients (e.g., crew-rs), forwards user messages, and receives
+long-polling requests from teloxide clients (e.g., Octos), forwards user messages, and receives
 Bot replies. This is the infrastructure layer for Stage 2 Bot-Native Messaging, providing Moly
 with the ability to communicate with any Telegram Bot framework.
 
@@ -50,7 +50,7 @@ The module must compile on all platforms via feature flags and cfg gates (disabl
 - moly-aitk/src/lib.rs (export new module)
 
 ### Forbidden
-- Do not modify existing moly-aitk client code (OpenAI client, CrewRs client, etc.)
+- Do not modify existing moly-aitk client code (OpenAI client, Octos client, etc.)
 - Do not add Makepad dependencies
 - Do not use tokio channel primitives (use futures channels)
 - Do not compile HTTP server code under wasm32
@@ -61,7 +61,7 @@ The module must compile on all platforms via feature flags and cfg gates (disabl
 - SQLite persistent storage (-> Task 2)
 - BotFather dialog logic (-> Task 4)
 - Moly UI integration (-> Task 5)
-- crew-rs base_url modification (-> Task 6)
+- Octos base_url modification (-> Task 6)
 
 ## Acceptance Criteria
 

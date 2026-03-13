@@ -1,14 +1,14 @@
 spec: task
-name: "crew-rs Telegram base_url Support"
-tags: [stage2, crew-rs, telegram, config]
+name: "Octos Telegram base_url Support"
+tags: [stage2, Octos, telegram, config]
 ---
 
 ## Intent
 
-Add a `base_url` field to the Telegram channel configuration in crew-rs,
+Add a `base_url` field to the Telegram channel configuration in Octos,
 allowing teloxide to connect to a custom Telegram Bot API server (such as
 Moly's local server) instead of api.telegram.org. This is the only change
-required on the crew-rs side for the Moly Bot-Native Messaging approach.
+required on the Octos side for the Moly Bot-Native Messaging approach.
 
 ## Constraints
 
@@ -27,9 +27,9 @@ required on the crew-rs side for the Moly Bot-Native Messaging approach.
 ## Boundary
 
 ### Allowed to Modify
-- crates/crew-bus/src/telegram_channel.rs (add parameter to TelegramChannel::new)
-- crates/crew-cli/src/commands/gateway/mod.rs (read base_url config)
-- crates/crew-cli/src/config.rs (add new field to ChannelEntry settings)
+- crates/octos-bus/src/telegram_channel.rs (add parameter to TelegramChannel::new)
+- crates/octos-cli/src/commands/gateway/mod.rs (read base_url config)
+- crates/octos-cli/src/config.rs (add new field to ChannelEntry settings)
 - dashboard/src/components/tabs/TelegramTab.tsx (add URL input field)
 
 ### Forbidden

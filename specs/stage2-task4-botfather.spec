@@ -30,7 +30,7 @@ Bot Store CRUD interfaces to operate on data.
 - /mybots uses an inline button list for display; clicking enters the Bot management submenu
 - Username validation rules: 3-32 characters, lowercase letters/digits/underscores only,
   must end with `_bot` or `bot`
-- BotFather replies include instructional text (how to paste the token into crew-rs)
+- BotFather replies include instructional text (how to paste the token into Octos)
 - Bot avatars use a default generated icon (based on the first letter of the name);
   /setuserpic allows customization
 
@@ -105,7 +105,7 @@ Scenario: /token shows token and usage instructions
   Given the "Weather Assistant" Bot has been selected for management
   When the user clicks the "View Token" button
   Then BotFather replies with that Bot's token
-  And the reply includes crew-rs configuration instructions (API URL and token paste steps)
+  And the reply includes Octos configuration instructions (API URL and token paste steps)
 
 Scenario: /revoke regenerates token
   Test: test_botfather_revoke_token
