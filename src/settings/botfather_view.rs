@@ -165,16 +165,21 @@ live_design! {
                 text: "Server will be restarted with the new port"
             }
 
-            port_status = <Label> {
+            port_status_wrap = <View> {
                 visible: false
                 width: Fill
-                margin: {top: 4}
-                draw_text: {
-                    text_style: {font_size: 9}
-                    color: #999999
-                    wrap: Word
+                flow: Down
+
+                port_status = <Label> {
+                    margin: {top: 4}
+                    width: Fill
+                    draw_text: {
+                        text_style: {font_size: 9}
+                        color: #999999
+                        wrap: Word
+                    }
+                    text: ""
                 }
-                text: ""
             }
 
             save_port_button = <MolyButton> {
@@ -292,21 +297,21 @@ impl BotFatherView {
         message: &str,
         color: Vec4,
     ) {
+        self.view(ids!(port_status_wrap)).set_visible(cx, true);
         let status = self.label(ids!(port_status));
         status.set_text(cx, message);
         status.apply_over(
             cx,
             live! {
-                visible: true,
                 draw_text: { color: (color) }
             },
         );
     }
 
     fn clear_port_status(&mut self, cx: &mut Cx) {
+        self.view(ids!(port_status_wrap)).set_visible(cx, false);
         let status = self.label(ids!(port_status));
         status.set_text(cx, "");
-        status.apply_over(cx, live! { visible: false });
     }
 }
 
