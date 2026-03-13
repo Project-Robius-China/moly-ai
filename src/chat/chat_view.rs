@@ -1037,6 +1037,21 @@ mod tests {
     }
 
     #[test]
+    fn test_port_config_in_botfather_panel() {
+        let source = include_str!("../settings/botfather_view.rs");
+        assert!(
+            source.contains("server_port_input")
+                || source.contains("port_input"),
+            "BotFather panel must have a port input field",
+        );
+        assert!(
+            source.contains("save_port")
+                || source.contains("Save"),
+            "BotFather panel must have a Save button",
+        );
+    }
+
+    #[test]
     fn test_telegram_bot_hidden_from_settings() {
         let source = include_str!("../settings/providers.rs");
         let draw_walk_start = source
