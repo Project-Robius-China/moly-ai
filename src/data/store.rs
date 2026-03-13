@@ -90,10 +90,6 @@ pub struct Store {
     /// Cached bot token → name mapping to avoid SQLite queries in draw paths.
     #[cfg(not(target_arch = "wasm32"))]
     bot_name_cache: std::collections::HashMap<String, String>,
-
-    /// Pre-computed sidebar entries (BotId, display_name) from the cache.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub bot_sidebar_cache: Vec<(BotId, String)>,
 }
 
 const MOLY_SERVER_VERSION_EXTENSION: &str = "/api/v1";
@@ -226,8 +222,6 @@ impl Store {
                 _bot_server_handle: bot_server_handle,
                 #[cfg(not(target_arch = "wasm32"))]
                 bot_name_cache: std::collections::HashMap::new(),
-                #[cfg(not(target_arch = "wasm32"))]
-                bot_sidebar_cache: Vec::new(),
             };
 
             #[cfg(not(target_arch = "wasm32"))]
@@ -308,12 +302,11 @@ impl Store {
         "Unknown".to_string()
     }
 
-    /// Refreshes the in-memory bot caches from SQLite.
+    /// Refreshes the in-memory bot name cache from SQLite.
     /// Call after bot creation, deletion, or rename operations.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn refresh_bot_name_cache(&mut self) {
         self.bot_name_cache.clear();
-        self.bot_sidebar_cache.clear();
 
         let Some(state) = &self.bot_server_state else {
             return;
@@ -323,22 +316,15 @@ impl Store {
         };
 
         for bot in bots {
-            let bot_id = if bot.username == "BotFather" {
-                RouterClient::prefix(
-                    "botfather",
-                    &BotId::new("botfather"),
-                )
-            } else {
-                RouterClient::prefix(
-                    "telegram_bot",
-                    &BotId::new(&bot.token),
-                )
-            };
-            self.bot_sidebar_cache
-                .push((bot_id, bot.name.clone()));
             self.bot_name_cache
                 .insert(bot.token, bot.name);
         }
+    }
+
+    /// Checks whether a raw bot token exists in the bot name cache.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn is_bot_token_known(&self, token: &str) -> bool {
+        self.bot_name_cache.contains_key(token)
     }
 
     /// This function combines the search results information for a given model
