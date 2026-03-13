@@ -1035,4 +1035,22 @@ mod tests {
             "entity_button module must still be declared",
         );
     }
+
+    #[test]
+    fn test_telegram_bot_hidden_from_settings() {
+        let source = include_str!("../settings/providers.rs");
+        let draw_walk_start = source
+            .find("fn draw_walk")
+            .expect("draw_walk should exist in providers.rs");
+        let draw_walk_fn = &source[draw_walk_start..];
+
+        assert!(
+            draw_walk_fn.contains("ProviderType::TelegramBot"),
+            "providers.rs draw_walk must filter out TelegramBot",
+        );
+        assert!(
+            draw_walk_fn.contains("filter"),
+            "providers.rs must use filter to exclude TelegramBot",
+        );
+    }
 }
