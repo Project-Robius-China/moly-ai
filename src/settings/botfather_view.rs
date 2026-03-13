@@ -270,10 +270,10 @@ impl WidgetMatchEvent for BotFatherView {
     ) {
         if self.button(ids!(save_port_button)).clicked(actions) {
             let port_text = self.text_input(ids!(port_input)).text();
-            if let Ok(port) = port_text.parse::<u16>() {
-                if port > 0 {
-                    cx.action(BotFatherAction::SavePort(port));
-                }
+            if let Ok(port) = port_text.parse::<u16>()
+                && port > 0
+            {
+                cx.action(BotFatherAction::SavePort(port));
             }
         }
     }

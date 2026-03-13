@@ -1052,6 +1052,32 @@ mod tests {
     }
 
     #[test]
+    fn test_port_change_hot_restart() {
+        let source = include_str!("../data/store.rs");
+        let method_start = source
+            .find("fn restart_bot_server")
+            .expect("restart_bot_server method must exist in store.rs");
+        let method_body = &source[method_start..];
+
+        assert!(
+            method_body.contains("bot_server_port"),
+            "restart_bot_server must save the new port to preferences",
+        );
+        assert!(
+            method_body.contains("_bot_server_handle"),
+            "restart_bot_server must drop the old server handle",
+        );
+        assert!(
+            method_body.contains("TelegramBotApiServer::start"),
+            "restart_bot_server must start a new server",
+        );
+        assert!(
+            method_body.contains("refresh_bot_name_cache"),
+            "restart_bot_server must refresh the bot name cache",
+        );
+    }
+
+    #[test]
     fn test_telegram_bot_hidden_from_settings() {
         let source = include_str!("../settings/providers.rs");
         let draw_walk_start = source

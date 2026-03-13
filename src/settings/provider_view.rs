@@ -1,7 +1,7 @@
 use makepad_widgets::*;
 use moly_kit::prelude::*;
 
-use crate::settings::botfather_view::BotFatherViewWidgetExt;
+use crate::settings::botfather_view::{BotFatherAction, BotFatherViewWidgetExt};
 
 use crate::data::{
     providers::{Provider, ProviderBot, ProviderConnectionStatus, ProviderType},
@@ -751,6 +751,17 @@ impl WidgetMatchEvent for ProviderView {
                     store.reload_bot_context();
                     self.redraw(cx);
                 }
+        }
+
+        // Handle BotFather port save
+        for action in actions {
+            if let BotFatherAction::SavePort(port) = action.cast() {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    store.restart_bot_server(port);
+                    self.redraw(cx);
+                }
+            }
         }
 
         // Handle save
