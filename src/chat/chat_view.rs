@@ -1078,6 +1078,24 @@ mod tests {
     }
 
     #[test]
+    fn test_invalid_port_rejected() {
+        let source = include_str!("../settings/botfather_view.rs");
+        let handler_start = source
+            .find("fn handle_actions")
+            .expect("handle_actions should exist in botfather_view.rs");
+        let handler_body = &source[handler_start..];
+
+        assert!(
+            handler_body.contains("parse::<u16>()"),
+            "Port input must be parsed as u16 to reject non-numeric values",
+        );
+        assert!(
+            handler_body.contains("port > 0"),
+            "Zero port must be rejected",
+        );
+    }
+
+    #[test]
     fn test_telegram_bot_hidden_from_settings() {
         let source = include_str!("../settings/providers.rs");
         let draw_walk_start = source
