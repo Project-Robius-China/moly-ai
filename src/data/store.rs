@@ -35,6 +35,13 @@ pub enum StoreAction {
     None,
 }
 
+#[derive(Clone, DefaultNone, Debug)]
+pub enum BotServerAction {
+    Restarted(u16),
+    RestartFailed { port: u16, message: String },
+    None,
+}
+
 #[derive(Clone, Debug)]
 pub struct FileWithDownloadInfo {
     pub file: File,
@@ -325,6 +332,119 @@ impl Store {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn is_bot_token_known(&self, token: &str) -> bool {
         self.bot_name_cache.contains_key(token)
+    }
+
+    /// Restarts the Telegram Bot API server on a new port.
+    ///
+    /// Performs a graceful shutdown of the existing server and starts a new
+    /// one with the updated port. Database and media paths remain unchanged,
+    /// preserving all bot data.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn restart_bot_server(&mut self, new_port: u16) {
+        use moly_kit::aitk::telegram_server::{
+            OutboundEvent, ServerConfig, TelegramBotApiServer,
+        };
+
+        if self.preferences.bot_server_port == new_port {
+            return;
+        }
+
+        let data_dir = {
+            use directories::ProjectDirs;
+            let dirs = ProjectDirs::from("com", "moly-ai", "moly")
+                .expect("Failed to determine app data directory");
+            dirs.data_dir().join("bot_server")
+        };
+
+        let config = ServerConfig {
+            port: new_port,
+            db_path: data_dir
+                .join("moly_bots.db")
+                .to_string_lossy()
+                .into_owned(),
+            media_dir: data_dir
+                .join("media")
+                .to_string_lossy()
+                .into_owned(),
+        };
+
+        spawn(async move {
+            match TelegramBotApiServer::start(config).await {
+                Ok((handle, state, mut outbound_rx)) => {
+                    ::log::info!(
+                        "Bot server restarted on http://{}",
+                        handle.addr,
+                    );
+
+                    spawn(async move {
+                        use crate::shared::actions::BotOutboundAction;
+                        use futures::StreamExt as _;
+                        while let Some(event) = outbound_rx.next().await {
+                            match event {
+                                OutboundEvent::SendMessage {
+                                    bot_token,
+                                    chat_id: _,
+                                    message,
+                                } => {
+                                    Cx::post_action(
+                                        BotOutboundAction::MessageReceived {
+                                            bot_token,
+                                            message: Box::new(message),
+                                        },
+                                    );
+                                }
+                                OutboundEvent::EditMessage {
+                                    bot_token,
+                                    chat_id: _,
+                                    message_id,
+                                    new_text,
+                                    reply_markup,
+                                } => {
+                                    Cx::post_action(
+                                        BotOutboundAction::MessageEdited {
+                                            bot_token,
+                                            message_id,
+                                            new_text,
+                                            reply_markup,
+                                        },
+                                    );
+                                }
+                                OutboundEvent::DeleteMessage {
+                                    bot_token,
+                                    chat_id: _,
+                                    message_id,
+                                } => {
+                                    Cx::post_action(
+                                        BotOutboundAction::MessageDeleted {
+                                            bot_token,
+                                            message_id,
+                                        },
+                                    );
+                                }
+                            }
+                        }
+                    });
+
+                    app_runner().defer(move |app, _, _| {
+                        let store = app.store.as_mut().unwrap();
+                        store.preferences.bot_server_port = new_port;
+                        store.preferences.save();
+                        store.bot_server_state = Some(state);
+                        store._bot_server_handle = Some(handle);
+                        store.refresh_bot_name_cache();
+                        store.reload_bot_context();
+                        Cx::post_action(BotServerAction::Restarted(new_port));
+                    });
+                }
+                Err(e) => {
+                    ::log::error!("Failed to restart bot server: {e}");
+                    Cx::post_action(BotServerAction::RestartFailed {
+                        port: new_port,
+                        message: e.to_string(),
+                    });
+                }
+            }
+        });
     }
 
     /// This function combines the search results information for a given model

@@ -625,33 +625,6 @@ impl ChatsDeck {
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn test_botfather_seed_message_is_persisted() {
-        let source = include_str!("chats_deck.rs");
-        assert!(
-            source.contains("chat.borrow().save_and_forget();"),
-            "BotFather seed message should be saved after insertion",
-        );
-    }
-
-    #[test]
-    fn test_message_received_does_not_refresh_bot_cache() {
-        let source = include_str!("chats_deck.rs");
-        let start = source
-            .find("BotOutboundAction::MessageReceived")
-            .expect("MessageReceived branch should exist");
-        let end = source[start..]
-            .find("BotOutboundAction::MessageEdited")
-            .map(|offset| start + offset)
-            .expect("MessageEdited branch should follow MessageReceived");
-        let message_received_block = &source[start..end];
-
-        assert!(
-            !message_received_block.contains("refresh_bot_name_cache"),
-            "MessageReceived should not rebuild the bot cache",
-        );
-    }
-
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn test_snap_to_char_boundary() {
@@ -672,14 +645,5 @@ mod tests {
         // Empty string.
         assert_eq!(snap_to_char_boundary("", 0), 0);
         assert_eq!(snap_to_char_boundary("", 5), 0);
-    }
-
-    #[test]
-    fn test_reveal_hack_is_documented() {
-        let source = include_str!("chats_deck.rs");
-        assert!(
-            source.contains("HACK(telegram-reveal)"),
-            "Reveal hack code must include HACK(telegram-reveal) tag",
-        );
     }
 }

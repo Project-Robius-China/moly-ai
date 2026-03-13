@@ -1,6 +1,6 @@
 use crate::{
     data::{
-        providers::{Provider, ProviderConnectionStatus},
+        providers::{Provider, ProviderConnectionStatus, ProviderType},
         store::{Store, normalize_provider_name},
     },
     settings::sync_modal::{SyncModalAction, SyncModalWidgetExt},
@@ -315,7 +315,13 @@ impl Widget for Providers {
     fn draw_walk(&mut self, cx: &mut Cx2d, scope: &mut Scope, walk: Walk) -> DrawStep {
         let store = scope.data.get::<Store>().unwrap();
 
-        let mut all_providers: Vec<Provider> = store.chats.providers.values().cloned().collect();
+        let mut all_providers: Vec<Provider> = store
+            .chats
+            .providers
+            .values()
+            .filter(|p| p.provider_type != ProviderType::TelegramBot)
+            .cloned()
+            .collect();
         all_providers.sort_by(|a, b| a.name.cmp(&b.name));
 
         let entries_count = all_providers.len();
