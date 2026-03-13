@@ -71,7 +71,7 @@ const MAX_CHAT_VIEWS: usize = 10;
 
 /// HACK(telegram-reveal): Characters to reveal per timer tick.
 /// At 25ms interval, 3 chars/tick ≈ 120 chars/sec.
-/// Remove when crew-rs adopts `sendMessageDraft` (Telegram Bot API 9.5).
+/// Remove when Octos adopts `sendMessageDraft` (Telegram Bot API 9.5).
 #[cfg(not(target_arch = "wasm32"))]
 const REVEAL_CHARS_PER_TICK: usize = 3;
 
@@ -81,7 +81,7 @@ const REVEAL_INTERVAL_SECS: f64 = 0.025;
 
 /// HACK(telegram-reveal): Per-message reveal animation state.
 ///
-/// Crew-rs throttles `editMessageText` to once per second (`EDIT_THROTTLE = 1000ms`),
+/// Octos throttles `editMessageText` to once per second (`EDIT_THROTTLE = 1000ms`),
 /// causing bot responses to arrive in jarring ~1-second blocks. This struct drives a
 /// client-side character-by-character reveal that smooths out the visual presentation.
 ///
@@ -89,7 +89,7 @@ const REVEAL_INTERVAL_SECS: f64 = 0.025;
 /// while the ChatController receives progressively revealed text via a Makepad
 /// interval timer.
 ///
-/// Remove when crew-rs adopts `sendMessageDraft` (Telegram Bot API 9.5).
+/// Remove when Octos adopts `sendMessageDraft` (Telegram Bot API 9.5).
 #[cfg(not(target_arch = "wasm32"))]
 struct PendingReveal {
     chat_id: ChatId,

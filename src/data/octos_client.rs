@@ -5,15 +5,15 @@ use reqwest::header::HeaderMap;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, RwLock};
 
-/// SSE event from the crew-rs gateway.
+/// SSE event from the Octos gateway.
 ///
-/// crew-rs uses a custom (non-OpenAI) SSE protocol. Streaming is triggered by
+/// Octos uses a custom (non-OpenAI) SSE protocol. Streaming is triggered by
 /// `POST /api/chat` with `"stream": true`. Event types observed:
 /// `response`, `token`, `tool_start`, `tool_end`, `cost_update`,
 /// `stream_end`, `done`.
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "type")]
-enum CrewRsEvent {
+enum OctosEvent {
     /// Signals the start of a response iteration.
     #[serde(rename = "response")]
     Response { iteration: u32 },
@@ -57,36 +57,36 @@ struct CostData {
 }
 
 #[derive(Clone, Debug)]
-struct CrewRsClientInner {
+struct OctosClientInner {
     url: String,
     headers: HeaderMap,
     client: reqwest::Client,
 }
 
-/// A client for interacting with the crew-rs gateway.
+/// A client for interacting with the Octos gateway.
 ///
-/// crew-rs uses a custom SSE protocol (not OpenAI-compatible).
+/// Octos uses a custom SSE protocol (not OpenAI-compatible).
 /// A single `POST /api/chat` with `"stream": true` returns an SSE stream.
-/// This client translates crew-rs events into aitk's `MessageContent` stream.
+/// This client translates Octos events into aitk's `MessageContent` stream.
 #[derive(Debug)]
-pub struct CrewRsClient(Arc<RwLock<CrewRsClientInner>>);
+pub struct OctosClient(Arc<RwLock<OctosClientInner>>);
 
-impl Clone for CrewRsClient {
+impl Clone for OctosClient {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
 }
 
-impl From<CrewRsClientInner> for CrewRsClient {
-    fn from(inner: CrewRsClientInner) -> Self {
+impl From<OctosClientInner> for OctosClient {
+    fn from(inner: OctosClientInner) -> Self {
         Self(Arc::new(RwLock::new(inner)))
     }
 }
 
-impl CrewRsClient {
-    /// Creates a new client with the given crew-rs gateway base URL.
+impl OctosClient {
+    /// Creates a new client with the given Octos gateway base URL.
     pub fn new(url: String) -> Self {
-        CrewRsClientInner {
+        OctosClientInner {
             url,
             headers: HeaderMap::new(),
             client: default_client(),
@@ -101,18 +101,18 @@ impl CrewRsClient {
             .map_err(|_| "Invalid header value")?;
         self.0
             .write()
-            .expect("CrewRsClient lock poisoned")
+            .expect("OctosClient lock poisoned")
             .headers
             .insert(reqwest::header::AUTHORIZATION, value);
         Ok(())
     }
 }
 
-impl BotClient for CrewRsClient {
+impl BotClient for OctosClient {
     fn bots(&mut self) -> BoxPlatformSendFuture<'static, ClientResult<Vec<Bot>>> {
         let bot = Bot {
-            id: BotId::new("crew-rs"),
-            name: "CrewRs Agent".to_string(),
+            id: BotId::new("Octos"),
+            name: "Octos Agent".to_string(),
             avatar: EntityAvatar::Text("C".into()),
             capabilities: BotCapabilities::new()
                 .with_capabilities([BotCapability::TextInput]),
@@ -131,7 +131,7 @@ impl BotClient for CrewRsClient {
         messages: &[Message],
         _tools: &[Tool],
     ) -> BoxPlatformSendStream<'static, ClientResult<MessageContent>> {
-        let inner = self.0.read().expect("CrewRsClient lock poisoned").clone();
+        let inner = self.0.read().expect("OctosClient lock poisoned").clone();
 
         // Extract the last user message as the chat payload
         let user_message = messages
@@ -175,7 +175,7 @@ impl BotClient for CrewRsClient {
                     );
                     yield ClientError::new_with_source(
                         ClientErrorKind::Network,
-                        format!("Failed to connect to crew-rs at {chat_url}"),
+                        format!("Failed to connect to Octos at {chat_url}"),
                         Some(error),
                     )
                     .into();
@@ -212,17 +212,17 @@ impl BotClient for CrewRsClient {
                     }
                 };
 
-                let crew_event: CrewRsEvent =
+                let octos_event: OctosEvent =
                     match serde_json::from_str(&event) {
                         Ok(e) => e,
                         Err(error) => {
                             log::error!(
-                                "Failed to parse crew-rs SSE event: \
+                                "Failed to parse Octos SSE event: \
                                  {error}\nEvent content: {event}"
                             );
                             yield ClientError::new_with_source(
                                 ClientErrorKind::Format,
-                                "Could not parse crew-rs SSE event as JSON"
+                                "Could not parse Octos SSE event as JSON"
                                     .to_string(),
                                 Some(error),
                             )
@@ -231,11 +231,11 @@ impl BotClient for CrewRsClient {
                         }
                     };
 
-                match crew_event {
-                    CrewRsEvent::Token { text } => {
+                match octos_event {
+                    OctosEvent::Token { text } => {
                         content.text.push_str(&text);
                     }
-                    CrewRsEvent::Response { iteration } => {
+                    OctosEvent::Response { iteration } => {
                         if !content.reasoning.is_empty() {
                             content.reasoning.push('\n');
                         }
@@ -243,18 +243,18 @@ impl BotClient for CrewRsClient {
                             &format!("[Response iteration {iteration}]"),
                         );
                     }
-                    CrewRsEvent::ToolStart { ref tool } => {
+                    OctosEvent::ToolStart { ref tool } => {
                         content.tool_calls.push(ToolCall {
-                            id: format!("crewrs-{tool}"),
+                            id: format!("octos-{tool}"),
                             name: tool.clone(),
                             arguments: serde_json::Map::new(),
                             permission_status:
                                 ToolCallPermissionStatus::default(),
                         });
                     }
-                    CrewRsEvent::ToolEnd { ref tool, success } => {
+                    OctosEvent::ToolEnd { ref tool, success } => {
                         content.tool_results.push(ToolResult {
-                            tool_call_id: format!("crewrs-{tool}"),
+                            tool_call_id: format!("octos-{tool}"),
                             content: if success {
                                 format!("Tool '{tool}' completed successfully")
                             } else {
@@ -263,7 +263,7 @@ impl BotClient for CrewRsClient {
                             is_error: !success,
                         });
                     }
-                    CrewRsEvent::CostUpdate {
+                    OctosEvent::CostUpdate {
                         input_tokens,
                         output_tokens,
                         session_cost,
@@ -278,8 +278,8 @@ impl BotClient for CrewRsClient {
                                 .unwrap_or_default(),
                         );
                     }
-                    CrewRsEvent::StreamEnd => {}
-                    CrewRsEvent::Done { .. } => {
+                    OctosEvent::StreamEnd => {}
+                    OctosEvent::Done { .. } => {
                         break;
                     }
                 }

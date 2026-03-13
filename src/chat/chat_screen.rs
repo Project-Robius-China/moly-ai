@@ -5,7 +5,7 @@ use moly_kit::prelude::*;
 use std::collections::HashMap;
 
 use crate::data::bot_fetcher::should_include_bot;
-use crate::data::crewrs_client::CrewRsClient;
+use crate::data::octos_client::OctosClient;
 use crate::data::deep_inquire_client::DeepInquireClient;
 use crate::data::openclaw_client::OpenClawClient;
 use crate::data::providers::{Provider, ProviderBot, ProviderId, ProviderType};
@@ -190,7 +190,7 @@ impl ChatScreen {
                         &providers,
                         store,
                     ),
-                    ProviderType::CrewRs => create_crewrs_client(
+                    ProviderType::Octos => create_octos_client(
                         provider,
                         &supported_providers_list,
                         &available_bots,
@@ -265,7 +265,7 @@ fn has_valid_credentials(provider: &Provider) -> bool {
         | ProviderType::OpenAiImage
         | ProviderType::DeepInquire
         | ProviderType::OpenClaw
-        | ProviderType::CrewRs
+        | ProviderType::Octos
         | ProviderType::BotFather
         | ProviderType::TelegramBot => true,
     }
@@ -489,14 +489,14 @@ fn create_openclaw_client(
     Some(Box::new(map_client))
 }
 
-fn create_crewrs_client(
+fn create_octos_client(
     provider: &Provider,
     supported_providers_list: &[SupportedProvider],
     available_bots: &BotMap,
     providers: &ProviderMap,
     store: &Store,
 ) -> Option<Box<dyn BotClient>> {
-    let mut client = CrewRsClient::new(provider.url.clone());
+    let mut client = OctosClient::new(provider.url.clone());
 
     if let Some(key) = provider.api_key.as_ref()
         && let Err(e) = client.set_key(key) {

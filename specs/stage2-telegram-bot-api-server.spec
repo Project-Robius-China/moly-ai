@@ -9,12 +9,12 @@ Target: 5/3 Demo
 
 Transform Moly from a "developer configures Provider" model to a "Telegram-style
 Bot management" model. Users create Bots through a BotFather conversation within
-Moly, obtain a token, paste the token into crew-rs's Telegram configuration,
-crew-rs connects to Moly's Bot API server via teloxide, and users chat with
+Moly, obtain a token, paste the token into Octos's Telegram configuration,
+Octos connects to Moly's Bot API server via teloxide, and users chat with
 Bots directly in Moly.
 
 Core innovation: Moly implements a Telegram Bot API compatible server, so any
-framework supporting the Telegram Bot API (crew-rs, python-telegram-bot, etc.)
+framework supporting the Telegram Bot API (Octos, python-telegram-bot, etc.)
 can connect.
 
 ## Architecture
@@ -82,7 +82,7 @@ can connect.
                           ▲
                           │ teloxide long polling
 ┌─────────────────────────┴───────────────────────────────┐
-│                   crew-rs Gateway                        │
+│                   Octos Gateway                        │
 │  Configuration:                                          │
 │  • TELOXIDE_TELEGRAM_API_URL=http://localhost:{port}     │
 │  • TELEGRAM_BOT_TOKEN=moly_{random_token}                │
@@ -97,12 +97,12 @@ can connect.
    → Calls AITK `push_update(bot_token, update)`
    → Update enters the per-bot queue
 
-2. **crew-rs pulls messages**
+2. **Octos pulls messages**
    → teloxide calls `POST /bot{token}/getUpdates` (long polling)
    → AITK server retrieves Updates from the queue and returns them
    → If no messages, blocks and waits (returns empty array after timeout)
 
-3. **crew-rs processes and replies**
+3. **Octos processes and replies**
    → Agent reasoning + tool calls
    → teloxide calls `POST /bot{token}/sendMessage`
    → AITK server receives the message, stores it in the messages table
@@ -133,7 +133,7 @@ Edit Bot:
 /deletebot      — Delete Bot
 
 Bot settings:
-/token     — View Bot token (for pasting into crew-rs)
+/token     — View Bot token (for pasting into Octos)
 /revoke    — Regenerate token
 ```
 
@@ -153,7 +153,7 @@ Token: moly_a1b2c3d4e5f6...
 
 How to use:
 1. Copy the Token above
-2. Paste it into the Telegram config on the crew-rs web page
+2. Paste it into the Telegram config on the Octos web page
 3. Set the API URL to: http://localhost:{port}
 4. Start the Gateway
 
@@ -234,7 +234,7 @@ struct File { file_id: String, file_unique_id: String, file_path: Option<String>
 
 ### API Endpoint Details
 
-| Endpoint | Method | Description | crew-rs Usage |
+| Endpoint | Method | Description | Octos Usage |
 |----------|--------|-------------|---------------|
 | /bot{token}/getMe | GET/POST | Return Bot info | Startup verification |
 | /bot{token}/getUpdates | POST | Long polling for messages | Core message receiving |
@@ -296,9 +296,9 @@ CREATE INDEX idx_messages_bot_chat ON messages(bot_id, chat_id);
 CREATE INDEX idx_messages_timestamp ON messages(timestamp);
 ```
 
-## crew-rs Side Configuration
+## Octos Side Configuration
 
-crew-rs only needs to support a custom API URL in the Telegram channel config:
+Octos only needs to support a custom API URL in the Telegram channel config:
 
 ```json
 {
@@ -317,7 +317,7 @@ crew-rs only needs to support a custom API URL in the Telegram channel config:
 
 teloxide supports setting a custom base URL via `Bot::from_env_with_client()` or
 the `TELOXIDE_TELEGRAM_API_URL` environment variable.
-The changes required in crew-rs are minimal: pass the base_url config in `TelegramChannel::new()`.
+The changes required in Octos are minimal: pass the base_url config in `TelegramChannel::new()`.
 
 ## Moly App Layer Design
 
@@ -332,13 +332,13 @@ The changes required in crew-rs are minimal: pass the base_url config in `Telegr
 
 Each created Bot automatically appears in the chat list:
 - Displays Bot name + avatar
-- Shows connection status (online/offline, depending on whether crew-rs is polling)
+- Shows connection status (online/offline, depending on whether Octos is polling)
 - Click to enter chat view
 - Chat view reuses the existing Chat interface
 
 ### Connection Status Detection
 
-- When crew-rs calls getUpdates, mark the Bot as "online"
+- When Octos calls getUpdates, mark the Bot as "online"
 - If no getUpdates request for more than 2 minutes, mark as "offline"
 - Display green/gray dot in the UI to indicate connection status
 
@@ -364,18 +364,18 @@ Each created Bot automatically appears in the chat list:
 | # | Decision | Rationale |
 |---|----------|-----------|
 | 1 | BotFather as a dialog rather than a settings page | Replicates the Telegram experience; zero UI learning curve |
-| 2 | Approach A: Full Telegram Bot API server | Maximum compatibility; zero changes to crew-rs |
+| 2 | Approach A: Full Telegram Bot API server | Maximum compatibility; zero changes to Octos |
 | 3 | Implement API server in the AITK layer | Generic and reusable; not tied to Makepad |
 | 4 | SQLite persistence | Supports message history and complex queries |
 | 5 | Full feature replication | Complete support for text/media/keyboard/edit/delete |
-| 6 | Long polling (not Webhook) | Desktop app has no public IP; consistent with crew-rs's existing mode |
+| 6 | Long polling (not Webhook) | Desktop app has no public IP; consistent with Octos's existing mode |
 
 ## Success Criteria
 
 1. User creates a Bot via BotFather `/newbot` within 30 seconds
-2. After pasting the token into crew-rs, crew-rs can successfully connect and chat
+2. After pasting the token into Octos, Octos can successfully connect and chat
 3. Supports bidirectional text message communication
-4. Supports inline keyboard button interactions sent by crew-rs
+4. Supports inline keyboard button interactions sent by Octos
 5. Supports media messages (images, voice, documents)
 6. Bot connection status is displayed in real time
 7. Message history is persistently stored and recoverable after restart

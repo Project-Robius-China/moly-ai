@@ -14,7 +14,7 @@ long text handling — all essential for a good AI chat UX.
 
 ### Priority 1: Streaming Edit-in-Place
 
-LLM responses arrive as a token stream. The bot framework (crew-rs via
+LLM responses arrive as a token stream. The bot framework (Octos via
 teloxide) should be able to:
 
 1. Call `sendMessage` with an initial placeholder (e.g., "Thinking...")

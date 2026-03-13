@@ -1,14 +1,14 @@
 spec: task
 name: "Stage1-Task3: WebSocket Gateway"
 status: delayed
-tags: [stage1, websocket, crew-rs]
+tags: [stage1, websocket, Octos]
 ---
 
-> **Note:** Delayed: SSE is sufficient for crew-rs integration.
+> **Note:** Delayed: SSE is sufficient for Octos integration.
 
 ## Intent
 
-Implement a WebSocket client to connect to the crew-rs WebSocket Gateway, supporting duplex
+Implement a WebSocket client to connect to the Octos WebSocket Gateway, supporting duplex
 communication. The server can proactively push status updates, and the client can send chat
 messages and receive streaming responses. moly-ai already has WebSocket support for openclaw
 that can serve as a reference.
@@ -17,7 +17,7 @@ that can serve as a reference.
 
 - Use futures channels instead of tokio channels (cross-platform compatibility)
 - Use tungstenite or a similar library for the WebSocket protocol layer
-- Message format is JSON, compatible with the crew-rs frame protocol
+- Message format is JSON, compatible with the Octos frame protocol
 - Authentication is passed via the WebSocket handshake header with an API key
 
 ## Boundary
@@ -41,7 +41,7 @@ that can serve as a reference.
 
 Scenario: WebSocket handshake and authentication
   Test: test_ws_handshake_with_auth
-  Given crew-rs WebSocket gateway address and API key
+  Given Octos WebSocket gateway address and API key
   When the client initiates a WebSocket connection
   Then the handshake succeeds and a connection is established
 

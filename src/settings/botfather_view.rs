@@ -264,7 +264,7 @@ live_design! {
                 }
                 <GuideStepRow> {
                     step_index = { text: "3." }
-                    step_text = { text: "Copy the token and configure it in crew-rs" }
+                    step_text = { text: "Copy the token and configure it in Octos" }
                 }
             }
         }

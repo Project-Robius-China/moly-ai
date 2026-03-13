@@ -11,7 +11,7 @@ Telegram Bot API server on Moly startup, store the ServerState in the App Store,
 start the outbound event consumption loop.
 
 This is a prerequisite for BotFather (task4) and Bot Chat Integration (task5).
-Once completed, Moly will have the ability to accept crew-rs teloxide connections.
+Once completed, Moly will have the ability to accept Octos teloxide connections.
 
 ## Constraints
 

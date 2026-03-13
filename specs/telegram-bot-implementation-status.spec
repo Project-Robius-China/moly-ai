@@ -6,7 +6,7 @@ tags: [telegram, bot-api, botfather, status]
 ## Intent
 
 Moly implements a Telegram Bot API compatible server locally, enabling any
-teloxide-based framework (e.g., crew-rs, python-telegram-bot) to connect to
+teloxide-based framework (e.g., Octos, python-telegram-bot) to connect to
 Moly as if it were Telegram. Users create and manage bots through an in-app
 BotFather dialog, obtain API tokens, and configure external bot frameworks
 to connect to `http://localhost:{port}`. No real Telegram account is needed.
@@ -56,7 +56,7 @@ is currently built, what remains, and what is out of scope.
                           │
 ┌─────────────────────────▼───────────────────────────────┐
 │              External Bot Clients (HTTP)                 │
-│  crew-rs / teloxide / python-telegram-bot / any HTTP    │
+│  Octos / teloxide / python-telegram-bot / any HTTP    │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -65,7 +65,7 @@ is currently built, what remains, and what is out of scope.
 1. User sends a message in Moly UI
 2. Moly constructs a Telegram `Update` JSON and calls `ServerState::push_update()`
 3. `push_update()` stores the update in SQLite, wakes the bot's long-poller
-4. External client (crew-rs via teloxide) calls `getUpdates` and receives the update
+4. External client (Octos via teloxide) calls `getUpdates` and receives the update
 5. External client responds via `sendMessage` (or editMessageText, deleteMessage)
 6. AITK pushes an `OutboundEvent` through the unbounded channel
 7. Moly app receives the event and displays it in the chat UI

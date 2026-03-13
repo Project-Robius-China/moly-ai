@@ -266,9 +266,9 @@ fn format_bot_created(bot: &BotInfo, server_port: u16) -> MessageContent {
     plain(format!(
         "**Done!** Your new bot **{name}** (@{username}) is ready.\n\n\
          **Token:**\n```\n{token}\n```\n\n\
-         **Connect with crew-rs:**\n\
+         **Connect with Octos:**\n\
          1. Set API URL to `http://localhost:{server_port}`\n\
-         2. Paste the token above into your crew-rs config",
+         2. Paste the token above into your Octos config",
         name = bot.name,
         username = bot.username,
         token = bot.token,
@@ -319,9 +319,9 @@ fn show_token(
             format!(
                 "**{name}** (@{username})\n\n\
                  **Token:**\n```\n{token}\n```\n\n\
-                 **Connect with crew-rs:**\n\
+                 **Connect with Octos:**\n\
                  1. Set API URL to `http://localhost:{server_port}`\n\
-                 2. Paste the token above into your crew-rs config",
+                 2. Paste the token above into your Octos config",
                 name = bot.name,
                 username = bot.username,
                 token = bot.token,
@@ -346,7 +346,7 @@ fn revoke_token(
             format!(
                 "**Token revoked.** New token:\n\n\
                  `{new_token}`\n\n\
-                 **Update your crew-rs config:**\n\
+                 **Update your Octos config:**\n\
                  - API URL: `http://localhost:{server_port}`\n\
                  - Replace the old token with the one above"
             )
@@ -606,7 +606,7 @@ mod tests {
         };
         let r = process_input(&mut state, "1", &store, 8488);
         assert!(r.text.contains(&format!("```\n{}\n```", bot.token)));
-        assert!(r.text.contains("crew-rs"));
+        assert!(r.text.contains("Octos"));
     }
 
     #[test]

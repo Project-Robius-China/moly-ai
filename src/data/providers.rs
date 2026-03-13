@@ -176,7 +176,7 @@ pub enum ProviderType {
     DeepInquire,
     MolyServer,
     OpenClaw,
-    CrewRs,
+    Octos,
     BotFather,
     TelegramBot,
 }
@@ -191,7 +191,7 @@ impl ProviderType {
             ProviderType::DeepInquire => "DeepInquire",
             ProviderType::MolyServer => "MolyServer",
             ProviderType::OpenClaw => "OpenClaw",
-            ProviderType::CrewRs => "CrewRs",
+            ProviderType::Octos => "Octos",
             ProviderType::BotFather => "BotFather",
             ProviderType::TelegramBot => "Telegram Bot",
         }
@@ -199,13 +199,13 @@ impl ProviderType {
 
     /// Whether users can select individual models for this provider.
     ///
-    /// Providers like OpenClaw and CrewRs manage models internally,
+    /// Providers like OpenClaw and Octos manage models internally,
     /// so the model selection UI should be hidden.
     pub fn has_model_selection(&self) -> bool {
         !matches!(
             self,
             ProviderType::OpenClaw
-                | ProviderType::CrewRs
+                | ProviderType::Octos
                 | ProviderType::BotFather
                 | ProviderType::TelegramBot
         )

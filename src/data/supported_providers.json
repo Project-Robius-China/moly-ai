@@ -162,12 +162,12 @@
             ]
         },
         {
-            "id": "crewrs",
-            "name": "CrewRs",
+            "id": "octos",
+            "name": "Octos",
             "url": "http://127.0.0.1:8080",
-            "provider_type": "CrewRs",
+            "provider_type": "Octos",
             "supported_models": [
-                "crew-rs"
+                "octos"
             ]
         }
     ]

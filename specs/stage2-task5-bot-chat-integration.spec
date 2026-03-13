@@ -7,7 +7,7 @@ tags: [stage2, moly, ui, chat]
 
 Integrate the AITK Telegram Bot API Server with Moly's chat UI, allowing users
 to chat with Bots directly within Moly. Messages sent by users are passed to
-crew-rs via push_update, and crew-rs replies are displayed in the Moly chat
+Octos via push_update, and Octos replies are displayed in the Moly chat
 interface via recv_outbound. Supports text messages, inline keyboard button
 interactions, media message rendering, and Bot connection status display.
 
@@ -73,13 +73,13 @@ Scenario: Send a text message to a Bot
 
 Scenario: Receive a Bot text reply
   Test: test_receive_bot_text_reply
-  Given crew-rs sent "Sunny today, 25C" via sendMessage
+  Given Octos sent "Sunny today, 25C" via sendMessage
   When Moly receives that message via recv_outbound
   Then the message appears on the left side of the chat view (Bot message)
 
 Scenario: Render inline keyboard buttons
   Test: test_render_inline_keyboard
-  Given crew-rs sent a message with inline_keyboard:
+  Given Octos sent a message with inline_keyboard:
     | row | text            | callback_data  |
     | 0   | Detailed Weather | weather_detail |
     | 0   | Next 3 Days      | weather_3day   |
@@ -95,19 +95,19 @@ Scenario: Click inline keyboard button sends callback
 
 Scenario: Bot connection status — online
   Test: test_bot_online_status
-  Given crew-rs called getUpdates within the past "30" seconds
+  Given Octos called getUpdates within the past "30" seconds
   When viewing the status of "Weather Assistant" in the chat list
   Then a green online indicator is displayed
 
 Scenario: Bot connection status — offline
   Test: test_bot_offline_status
-  Given crew-rs has not called getUpdates for more than "2" minutes
+  Given Octos has not called getUpdates for more than "2" minutes
   When viewing the status of "Weather Assistant" in the chat list
   Then a gray offline indicator is displayed
 
 Scenario: Receive and render a media message
   Test: test_receive_media_message
-  Given crew-rs sent an image via sendPhoto with caption "Weather Chart"
+  Given Octos sent an image via sendPhoto with caption "Weather Chart"
   When Moly receives and displays that message
   Then the chat view shows an image preview
   And the caption "Weather Chart" is displayed below the image
@@ -115,13 +115,13 @@ Scenario: Receive and render a media message
 Scenario: Bot message edit updates in real time
   Test: test_message_edit_updates_ui
   Given the Bot has sent message_id "5" with content "Processing..."
-  When crew-rs calls editMessageText to change the content to "Processing complete!"
+  When Octos calls editMessageText to change the content to "Processing complete!"
   Then the text of message_id "5" in the chat view is updated to "Processing complete!"
 
 Scenario: Bot message deletion removes it from the UI
   Test: test_message_delete_removes_from_ui
   Given the Bot has sent a message with message_id "5"
-  When crew-rs calls deleteMessage to delete that message
+  When Octos calls deleteMessage to delete that message
   Then that message is no longer displayed in the chat view
 
 Scenario: Chat history is restored after app restart

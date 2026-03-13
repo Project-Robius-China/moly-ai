@@ -6,9 +6,9 @@ tags: [stage2, aitk, telegram-api, media]
 ## Intent
 
 Add media message support (images, voice, audio, documents) to the AITK Telegram
-Bot API Server. crew-rs's TelegramChannel uses sendPhoto/sendVoice/sendAudio/sendDocument
+Bot API Server. Octos's TelegramChannel uses sendPhoto/sendVoice/sendAudio/sendDocument
 to send media replies and getFile to download user-sent media. This task ensures these
-endpoints work correctly so that Moly can fully display all types of crew-rs replies.
+endpoints work correctly so that Moly can fully display all types of Octos replies.
 
 ## Constraints
 

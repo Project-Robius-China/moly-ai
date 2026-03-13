@@ -474,7 +474,7 @@ impl WidgetMatchEvent for AddProviderModal {
                     system_prompt: None,
                     tools_enabled: true,
                 },
-                ProviderType::CrewRs => Provider {
+                ProviderType::Octos => Provider {
                     id: provider_id,
                     name: name.clone(),
                     url: api_host.clone(),
@@ -483,7 +483,7 @@ impl WidgetMatchEvent for AddProviderModal {
                     } else {
                         Some(api_key.clone())
                     },
-                    provider_type: ProviderType::CrewRs,
+                    provider_type: ProviderType::Octos,
                     connection_status: ProviderConnectionStatus::Disconnected,
                     enabled: true,
                     models: vec![],
