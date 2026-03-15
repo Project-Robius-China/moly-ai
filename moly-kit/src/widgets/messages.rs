@@ -795,7 +795,7 @@ impl Messages {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn test_code_copy_uses_ancestor_lookup_instead_of_fixed_index() {
+    fn test_code_copy_lookup() {
         let source = include_str!("messages.rs");
         let implementation = source.split("#[cfg(test)]").next().unwrap_or(source);
         assert!(implementation.contains("widget_action(ids!(copy_code_button))"));

@@ -96,7 +96,7 @@ mod tests {
     }
 
     #[test]
-    fn test_telegram_to_aitk_basic() {
+    fn test_message() {
         let tg_msg = make_telegram_message("Hello from bot");
         let bot_id = BotId::new("test_bot");
         let msg = telegram_to_aitk_message(&tg_msg, &bot_id);
@@ -108,7 +108,7 @@ mod tests {
     }
 
     #[test]
-    fn test_inline_keyboard_to_quick_replies() {
+    fn test_inline_keyboard() {
         let kb = InlineKeyboardMarkup {
             inline_keyboard: vec![vec![
                 InlineKeyboardButton {

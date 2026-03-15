@@ -312,7 +312,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_serialize_deserialize() {
+    fn test_json_roundtrip() {
         let config = McpServersConfig::create_sample();
         let json = config.to_json().unwrap();
         let deserialized = McpServersConfig::from_json(&json).unwrap();
@@ -322,7 +322,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mcp_standard_format() {
+    fn test_mcp_json() {
         let config = McpServersConfig::create_sample();
         let json = config.to_json().unwrap();
         println!("Generated JSON: {}", json);
@@ -345,7 +345,7 @@ mod tests {
     }
 
     #[test]
-    fn test_stdio_server_creation() {
+    fn test_stdio_server() {
         let server = McpServer::stdio("node".to_string(), vec!["server.js".to_string()])
             .with_working_directory("/path/to/server".to_string());
 
@@ -361,7 +361,7 @@ mod tests {
     }
 
     #[test]
-    fn test_http_server_creation() {
+    fn test_http_server() {
         let server = McpServer::http("http://localhost:8080".to_string());
 
         assert!(!server.is_stdio());
@@ -372,7 +372,7 @@ mod tests {
     }
 
     #[test]
-    fn test_sse_server_creation() {
+    fn test_sse_server() {
         let server = McpServer::sse("http://localhost:8080/sse".to_string());
 
         assert!(!server.is_stdio());
@@ -383,7 +383,7 @@ mod tests {
     }
 
     #[test]
-    fn test_claude_format_compatibility() {
+    fn test_claude_format() {
         // Test that we can parse VS Code format
         let vscode_json = r#"{
             "servers": {

@@ -229,7 +229,7 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_token() {
+    fn test_token() {
         assert_eq!(
             TelegramBotClient::extract_token(&BotId::new(
                 "telegram_bot/123:ABC"
@@ -243,7 +243,7 @@ mod tests {
     }
 
     #[test]
-    fn test_build_update_json_for_callback_includes_source_message() {
+    fn test_callback_json() {
         // Format: cb:{source_message_id}:{callback_data}
         let update = TelegramBotClient::build_update_json(&[
             bot_message("42", "Pick one"),
@@ -257,7 +257,7 @@ mod tests {
     }
 
     #[test]
-    fn test_callback_binds_to_correct_message_not_latest() {
+    fn test_callback_bind() {
         // Bot sends message A (id=10, with buttons), then message B (id=11).
         // User clicks button on A → should bind to A, not B.
         let update = TelegramBotClient::build_update_json(&[
@@ -272,7 +272,7 @@ mod tests {
     }
 
     #[test]
-    fn test_build_update_json_for_plain_message_keeps_text_message_shape() {
+    fn test_plain_json() {
         let update =
             TelegramBotClient::build_update_json(&[user_message("hello")]);
 

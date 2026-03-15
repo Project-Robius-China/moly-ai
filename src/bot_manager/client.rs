@@ -150,7 +150,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_botfather_welcome_message() {
+    fn test_welcome() {
         let content = BotFatherClient::welcome_message();
         assert!(content.text.contains("Welcome to BotFather"));
         assert!(content.text.contains("/newbot"));

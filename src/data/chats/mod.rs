@@ -514,7 +514,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_find_chat_for_bot_returns_existing_chat_id() {
+    fn test_find_chat() {
         let mut chats = Chats::new(MolyClient::new("http://localhost".into()));
         let bot_id = BotId::new("telegram_bot/token-1");
         let chat_id = chats.create_empty_chat(Some(bot_id.clone()));

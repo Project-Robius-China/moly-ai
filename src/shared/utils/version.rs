@@ -226,7 +226,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_version_size() {
+    fn test_size() {
         assert_eq!(std::mem::size_of::<Version>(), std::mem::size_of::<u64>());
         assert_eq!(
             std::mem::size_of::<Option<Version>>(),
@@ -235,7 +235,7 @@ mod tests {
     }
 
     #[test]
-    fn test_version_bump() {
+    fn test_bump() {
         let mut v = Version::new();
         let initial = v;
         v.bump();
@@ -243,14 +243,14 @@ mod tests {
     }
 
     #[test]
-    fn test_version_wrap() {
+    fn test_wrap() {
         let mut v = Version(NonZeroU64::new(u64::MAX).unwrap());
         v.bump();
         assert_eq!(v.0.get(), 1);
     }
 
     #[test]
-    fn test_pull_version() {
+    fn test_pull() {
         let mut versioned = Versioned::new(10);
         let mut tracker = Version::new();
 
@@ -262,7 +262,7 @@ mod tests {
     }
 
     #[test]
-    fn test_pull_option_version() {
+    fn test_pull_option() {
         let mut versioned = Versioned::new(10);
         let mut tracker: Option<Version> = None;
 
@@ -276,7 +276,7 @@ mod tests {
     }
 
     #[test]
-    fn test_serialization_ignores_version() {
+    fn test_serde() {
         let mut versioned = Versioned::new(vec![1, 2, 3]);
         versioned.set(vec![4, 5, 6]);
         let json = serde_json::to_string(&versioned).expect("Failed to serialize");
@@ -290,7 +290,7 @@ mod tests {
     }
 
     #[test]
-    fn test_clone_keeps_version() {
+    fn test_clone() {
         let mut v1 = Versioned::new(10);
         v1.set(20);
 
