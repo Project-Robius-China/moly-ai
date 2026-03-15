@@ -216,16 +216,8 @@ fn handle_html_tag(
         "/u" => {}
         "tg-spoiler" => toggle_marker(body, spoiler_depth, "||", true),
         "/tg-spoiler" => toggle_marker(body, spoiler_depth, "||", false),
-        "code" => {
-            if !*in_pre {
-                toggle_marker(body, code_depth, "`", true);
-            }
-        }
-        "/code" => {
-            if !*in_pre {
-                toggle_marker(body, code_depth, "`", false);
-            }
-        }
+        "code" if !*in_pre => toggle_marker(body, code_depth, "`", true),
+        "/code" if !*in_pre => toggle_marker(body, code_depth, "`", false),
         "/a" => {
             if let Some(url) = link_stack.pop() {
                 body.push_str(&format!("]({url})"));
