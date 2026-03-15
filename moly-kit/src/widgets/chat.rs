@@ -675,7 +675,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_is_external_quick_reply_action() {
+    fn test_external_quick_reply() {
         assert_eq!(
             external_quick_reply_url("open:https://example.com"),
             Some("https://example.com")

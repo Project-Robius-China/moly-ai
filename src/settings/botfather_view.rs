@@ -531,7 +531,7 @@ mod tests {
     use super::should_sync_port_input;
 
     #[test]
-    fn clean_port_input_tracks_server_port() {
+    fn test_clean_port() {
         assert!(should_sync_port_input(
             false,
             Some(8488),
@@ -541,7 +541,7 @@ mod tests {
     }
 
     #[test]
-    fn dirty_port_input_keeps_user_edit() {
+    fn test_dirty_port() {
         assert!(!should_sync_port_input(
             true,
             Some(8488),
@@ -551,7 +551,7 @@ mod tests {
     }
 
     #[test]
-    fn pending_saved_port_is_not_replaced_by_stale_port() {
+    fn test_pending_port() {
         assert!(!should_sync_port_input(
             false,
             Some(8488),

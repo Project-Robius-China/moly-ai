@@ -474,7 +474,7 @@ mod tests {
     use super::*;
     use moly_kit::aitk::telegram_server::BotStoreConfig;
 
-    fn test_store() -> BotStore {
+    fn store() -> BotStore {
         BotStore::open(&BotStoreConfig {
             db_path: ":memory:".into(),
             media_dir: String::new(),
@@ -483,8 +483,8 @@ mod tests {
     }
 
     #[test]
-    fn test_botfather_start_command() {
-        let store = test_store();
+    fn test_start() {
+        let store = store();
         let mut state = DialogState::default();
         let r = process_input(&mut state, "/start", &store, 8488);
         assert!(r.text.contains("Welcome"));
@@ -493,16 +493,16 @@ mod tests {
     }
 
     #[test]
-    fn test_start_has_no_quick_replies() {
-        let store = test_store();
+    fn test_start_no_replies() {
+        let store = store();
         let mut state = DialogState::default();
         let r = process_input(&mut state, "/start", &store, 8488);
         assert!(r.quick_replies.is_empty());
     }
 
     #[test]
-    fn test_botfather_newbot_flow() {
-        let store = test_store();
+    fn test_newbot_flow() {
+        let store = store();
         let mut state = DialogState::default();
 
         let r = process_input(&mut state, "/newbot", &store, 8488);
@@ -523,8 +523,8 @@ mod tests {
     }
 
     #[test]
-    fn test_newbot_token_in_code_block() {
-        let store = test_store();
+    fn test_token_block() {
+        let store = store();
         let mut state = DialogState::default();
         let _ = process_input(&mut state, "/newbot", &store, 8488);
         let _ = process_input(&mut state, "Demo", &store, 8488);
@@ -536,8 +536,8 @@ mod tests {
     }
 
     #[test]
-    fn test_botfather_newbot_invalid_username() {
-        let store = test_store();
+    fn test_invalid_username() {
+        let store = store();
         let mut state = DialogState::AwaitingUsername {
             name: "Test".into(),
         };
@@ -556,8 +556,8 @@ mod tests {
     }
 
     #[test]
-    fn test_botfather_newbot_duplicate_username() {
-        let store = test_store();
+    fn test_duplicate_username() {
+        let store = store();
         store.create_bot("First", "weather_bot").unwrap();
 
         let mut state = DialogState::AwaitingUsername {
@@ -572,8 +572,8 @@ mod tests {
     }
 
     #[test]
-    fn test_mybots_lists_bots() {
-        let store = test_store();
+    fn test_mybots() {
+        let store = store();
         store.create_bot("Alpha", "alpha_bot").unwrap();
         store.create_bot("Beta", "beta_bot").unwrap();
 
@@ -587,8 +587,8 @@ mod tests {
     }
 
     #[test]
-    fn test_mybots_empty() {
-        let store = test_store();
+    fn test_empty_mybots() {
+        let store = store();
         let mut state = DialogState::default();
         let r = process_input(&mut state, "/mybots", &store, 8488);
         assert!(r.text.contains("haven't created any bots"));
@@ -597,8 +597,8 @@ mod tests {
     }
 
     #[test]
-    fn test_botfather_token_command() {
-        let store = test_store();
+    fn test_token() {
+        let store = store();
         let bot = store.create_bot("Weather Bot", "weather_bot").unwrap();
 
         let mut state = DialogState::ManagingBot {
@@ -610,8 +610,8 @@ mod tests {
     }
 
     #[test]
-    fn test_botfather_revoke_token() {
-        let store = test_store();
+    fn test_revoke_token() {
+        let store = store();
         let bot = store.create_bot("Weather Bot", "weather_bot").unwrap();
         let old_token = bot.token.clone();
 
@@ -627,8 +627,8 @@ mod tests {
     }
 
     #[test]
-    fn test_botfather_setname() {
-        let store = test_store();
+    fn test_setname() {
+        let store = store();
         let bot = store.create_bot("Weather Bot", "weather_bot").unwrap();
 
         let mut state = DialogState::ManagingBot {
@@ -648,8 +648,8 @@ mod tests {
     }
 
     #[test]
-    fn test_botfather_deletebot_confirms() {
-        let store = test_store();
+    fn test_deletebot() {
+        let store = store();
         let bot = store.create_bot("Weather Bot", "weather_bot").unwrap();
 
         let mut state = DialogState::ManagingBot {
@@ -665,24 +665,24 @@ mod tests {
     }
 
     #[test]
-    fn test_botfather_unknown_command() {
-        let store = test_store();
+    fn test_unknown_input() {
+        let store = store();
         let mut state = DialogState::default();
         let r = process_input(&mut state, "some random text", &store, 8488);
         assert!(r.text.contains("/start"));
     }
 
     #[test]
-    fn test_process_input_returns_message_content() {
-        let store = test_store();
+    fn test_cancel_idle() {
+        let store = store();
         let mut state = DialogState::default();
         let r = process_input(&mut state, "/cancel", &store, 8488);
         assert!(r.text.contains("No active operation"));
     }
 
     #[test]
-    fn test_resolve_bot_selection_returns_message_content() {
-        let store = test_store();
+    fn test_resolve() {
+        let store = store();
         store.create_bot("Test", "test_bot").unwrap();
         let mut state = DialogState::default();
         let r = resolve_bot_selection(&mut state, "1", &store);
@@ -691,7 +691,7 @@ mod tests {
     }
 
     #[test]
-    fn test_username_validation() {
+    fn test_username() {
         assert!(validate_username("ab").is_err());
         assert!(validate_username("a".repeat(33).as_str()).is_err());
         assert!(validate_username("UPPER_bot").is_err());

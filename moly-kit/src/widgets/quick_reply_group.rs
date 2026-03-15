@@ -285,7 +285,7 @@ impl QuickReplyGroupRef {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn test_quick_reply_group_uses_widget_actions() {
+    fn test_widget_actions() {
         let source = include_str!("quick_reply_group.rs");
         let implementation = source.split("#[cfg(test)]").next().unwrap_or(source);
         assert!(implementation.contains("cx.widget_action("));
@@ -293,7 +293,7 @@ mod tests {
     }
 
     #[test]
-    fn test_quick_reply_group_does_not_use_portal_list() {
+    fn test_no_portal_list() {
         let source = include_str!("quick_reply_group.rs");
         let implementation = source.split("#[cfg(test)]").next().unwrap_or(source);
         assert!(!implementation.contains("<PortalList>"));
@@ -301,7 +301,7 @@ mod tests {
     }
 
     #[test]
-    fn test_quick_reply_button_uses_custom_pixel_shader() {
+    fn test_button_shader() {
         let source = include_str!("quick_reply_group.rs");
         let implementation = source.split("#[cfg(test)]").next().unwrap_or(source);
         assert!(implementation.contains("fn pixel(self) -> vec4"));

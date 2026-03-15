@@ -962,7 +962,7 @@ mod tests {
     }
 
     #[test]
-    fn sync_store_chat_messages_replaces_stale_store_snapshot() {
+    fn test_sync_messages() {
         let temp_dir = std::env::temp_dir().join(format!(
             "moly-chat-view-test-{}",
             std::process::id()

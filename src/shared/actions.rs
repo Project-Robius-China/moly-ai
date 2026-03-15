@@ -53,7 +53,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_chat_action_separates_new_chat_from_sidebar_selection() {
+    fn test_chat_actions() {
         let start = ChatAction::Start(BotId::new("model"));
         let select = ChatAction::StartOrSelect(BotId::new("telegram_bot/token"));
 
