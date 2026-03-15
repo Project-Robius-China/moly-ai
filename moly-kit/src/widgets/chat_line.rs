@@ -133,15 +133,23 @@ live_design! {
         }
 
         message_section = <RoundedView> {
+            width: Fill,
             flow: Down,
             height: Fit,
             sender = <Sender> {}
             content_section = <View> {
+                width: Fill,
                 height: Fit,
                 margin: { left: 32 }
-                content = <Slot> { default: <StandardMessageContent> {} }
+                content = <Slot> {
+                    default: <StandardMessageContent> {}
+                }
             }
-            editor = <Editor> { margin: { left: 32 }, visible: false }
+            editor = <Editor> {
+                width: Fill,
+                margin: { left: 32 },
+                visible: false
+            }
         }
         actions_section = <View> {
             flow: Overlay,
