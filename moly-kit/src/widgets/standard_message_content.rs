@@ -27,6 +27,7 @@ live_design! {
     use crate::widgets::attachment_viewer_modal::*;
 
     pub StandardMessageContent = {{StandardMessageContent}} {
+        width: Fill,
         flow: Down
         height: Fit,
         spacing: 5
@@ -64,6 +65,219 @@ fn convert_math_delimiters(text: &str) -> String {
         .replace(r"\)", "$")
         .replace(r"\[", "$$")
         .replace(r"\]", "$$")
+}
+
+fn normalize_message_body(text: &str) -> String {
+    // Telegram channel sends a limited HTML subset. Converting it into the
+    // existing Markdown widget is more reliable than Makepad's Html widget
+    // for mixed CJK + emoji content.
+    let mut body = String::with_capacity(text.len());
+    let mut i = 0;
+    let mut bold_depth = 0usize;
+    let mut italic_depth = 0usize;
+    let mut strike_depth = 0usize;
+    let mut code_depth = 0usize;
+    let mut spoiler_depth = 0usize;
+    let mut blockquote_depth = 0usize;
+    let mut in_pre = false;
+    let mut link_stack: Vec<String> = Vec::new();
+
+    while i < text.len() {
+        let rest = &text[i..];
+
+        if let Some(tag_start) = rest.find('<') {
+            let text_part = &rest[..tag_start];
+            append_text_fragment(
+                &mut body,
+                text_part,
+                blockquote_depth,
+                in_pre,
+            );
+            i += tag_start;
+
+            let rest = &text[i..];
+            let Some(tag_end) = rest.find('>') else {
+                append_text_fragment(
+                    &mut body,
+                    rest,
+                    blockquote_depth,
+                    in_pre,
+                );
+                break;
+            };
+
+            let tag = &rest[1..tag_end];
+            handle_html_tag(
+                &mut body,
+                tag,
+                &mut bold_depth,
+                &mut italic_depth,
+                &mut strike_depth,
+                &mut code_depth,
+                &mut spoiler_depth,
+                &mut blockquote_depth,
+                &mut in_pre,
+                &mut link_stack,
+            );
+            i += tag_end + 1;
+        } else {
+            append_text_fragment(
+                &mut body,
+                rest,
+                blockquote_depth,
+                in_pre,
+            );
+            break;
+        }
+    }
+
+    body = body
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&amp;", "&")
+        .replace("&nbsp;", " ");
+
+    let lines: Vec<&str> = body.lines().map(str::trim_end).collect();
+    let mut normalized = lines.join("\n");
+    while normalized.contains("\n\n\n") {
+        normalized = normalized.replace("\n\n\n", "\n\n");
+    }
+    normalized.trim().to_string()
+}
+
+fn append_text_fragment(
+    body: &mut String,
+    text: &str,
+    blockquote_depth: usize,
+    in_pre: bool,
+) {
+    if blockquote_depth == 0 || in_pre {
+        body.push_str(text);
+        return;
+    }
+
+    for ch in text.chars() {
+        body.push(ch);
+        if ch == '\n' {
+            body.push_str("> ");
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn handle_html_tag(
+    body: &mut String,
+    tag: &str,
+    bold_depth: &mut usize,
+    italic_depth: &mut usize,
+    strike_depth: &mut usize,
+    code_depth: &mut usize,
+    spoiler_depth: &mut usize,
+    blockquote_depth: &mut usize,
+    in_pre: &mut bool,
+    link_stack: &mut Vec<String>,
+) {
+    let lower = tag.trim().to_ascii_lowercase();
+
+    match lower.as_str() {
+        "br" | "br/" | "br /" => body.push('\n'),
+        "p" => {}
+        "/p" => body.push_str("\n\n"),
+        "blockquote" => {
+            ensure_block_spacing(body);
+            body.push_str("> ");
+            *blockquote_depth += 1;
+        }
+        "/blockquote" => {
+            *blockquote_depth = blockquote_depth.saturating_sub(1);
+            body.push_str("\n\n");
+        }
+        "pre" => {
+            ensure_block_spacing(body);
+            body.push_str("```\n");
+            *in_pre = true;
+        }
+        "/pre" => {
+            if !body.ends_with('\n') {
+                body.push('\n');
+            }
+            body.push_str("```\n\n");
+            *in_pre = false;
+        }
+        "b" | "strong" => toggle_marker(body, bold_depth, "**", true),
+        "/b" | "/strong" => toggle_marker(body, bold_depth, "**", false),
+        "i" | "em" => toggle_marker(body, italic_depth, "_", true),
+        "/i" | "/em" => toggle_marker(body, italic_depth, "_", false),
+        "s" | "del" => toggle_marker(body, strike_depth, "~~", true),
+        "/s" | "/del" => toggle_marker(body, strike_depth, "~~", false),
+        "u" => {}
+        "/u" => {}
+        "tg-spoiler" => toggle_marker(body, spoiler_depth, "||", true),
+        "/tg-spoiler" => toggle_marker(body, spoiler_depth, "||", false),
+        "code" => {
+            if !*in_pre {
+                toggle_marker(body, code_depth, "`", true);
+            }
+        }
+        "/code" => {
+            if !*in_pre {
+                toggle_marker(body, code_depth, "`", false);
+            }
+        }
+        "/a" => {
+            if let Some(url) = link_stack.pop() {
+                body.push_str(&format!("]({url})"));
+            }
+        }
+        _ if lower.starts_with("a ") => {
+            if let Some(url) = extract_href(tag) {
+                body.push('[');
+                link_stack.push(url);
+            }
+        }
+        _ if lower.starts_with("code ") => {}
+        _ => {}
+    }
+}
+
+fn toggle_marker(body: &mut String, depth: &mut usize, marker: &str, opening: bool) {
+    if opening {
+        if *depth == 0 {
+            body.push_str(marker);
+        }
+        *depth += 1;
+        return;
+    }
+
+    if *depth == 0 {
+        return;
+    }
+
+    *depth -= 1;
+    if *depth == 0 {
+        body.push_str(marker);
+    }
+}
+
+fn ensure_block_spacing(body: &mut String) {
+    if body.is_empty() || body.ends_with("\n\n") {
+        return;
+    }
+
+    if body.ends_with('\n') {
+        body.push('\n');
+    } else {
+        body.push_str("\n\n");
+    }
+}
+
+fn extract_href(tag: &str) -> Option<String> {
+    let href_start = tag.find("href=\"")?;
+    let href = &tag[href_start + 6..];
+    let href_end = href.find('"')?;
+    Some(href[..href_end].to_string())
 }
 
 impl StandardMessageContent {
@@ -105,17 +319,16 @@ impl StandardMessageContent {
             .unwrap()
             .set_content(cx, content, metadata);
 
-        let markdown = self.label(ids!(markdown));
-
-        if metadata.is_writing() {
+        let rendered_text = if metadata.is_writing() {
             let text_with_typing = format!("{} {}", content.text, TYPING_INDICATOR);
-            markdown.set_text(cx, &convert_math_delimiters(&text_with_typing));
+            normalize_message_body(&convert_math_delimiters(&text_with_typing))
         } else if !content.tool_calls.is_empty() {
             let tool_calls_text = Self::generate_tool_calls_text(content);
-            markdown.set_text(cx, &convert_math_delimiters(&tool_calls_text));
+            normalize_message_body(&convert_math_delimiters(&tool_calls_text))
         } else {
-            markdown.set_text(cx, &convert_math_delimiters(&content.text));
-        }
+            normalize_message_body(&convert_math_delimiters(&content.text))
+        };
+        self.label(ids!(markdown)).set_text(cx, &rendered_text);
     }
 
     fn generate_tool_calls_text(content: &MessageContent) -> String {
@@ -209,5 +422,34 @@ impl StandardMessageContentRef {
         };
 
         inner.set_content_with_metadata(cx, content, metadata);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_message_body;
+
+    #[test]
+    fn test_normalize_html() {
+        let text = "Intro\n\n1. <b>Bold item</b>\n<blockquote>quote</blockquote>";
+        assert_eq!(
+            normalize_message_body(text),
+            "Intro\n\n1. **Bold item**\n\n> quote"
+        );
+    }
+
+    #[test]
+    fn test_normalize_link_and_entities() {
+        let text = "<a href=\"https://example.com\">link</a> &amp; &lt;tag&gt;";
+        assert_eq!(
+            normalize_message_body(text),
+            "[link](https://example.com) & <tag>"
+        );
+    }
+
+    #[test]
+    fn test_nested_bold() {
+        let text = "<b>🧠 <b>核心功能</b></b>";
+        assert_eq!(normalize_message_body(text), "**🧠 核心功能**");
     }
 }

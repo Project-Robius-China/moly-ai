@@ -147,8 +147,8 @@ live_design! {
         draw_block: {
             line_color: (MD_FONT_COLOR)
             sep_color: (#EDEDED)
-            quote_bg_color: (#EDEDED)
-            quote_fg_color: (#969696)
+            quote_bg_color: (#F2F4F7)
+            quote_fg_color: (#344054)
             code_color: (#EDEDED)
         }
     }
