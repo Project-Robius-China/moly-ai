@@ -9,8 +9,7 @@ use crate::{
 use makepad_widgets::*;
 
 use super::{
-    citation_list::CitationListWidgetExt,
-    message_thinking_block::MessageThinkingBlockWidgetExt,
+    citation_list::CitationListWidgetExt, message_thinking_block::MessageThinkingBlockWidgetExt,
     quick_reply_group::QuickReplyGroupWidgetExt,
 };
 
@@ -67,6 +66,20 @@ fn convert_math_delimiters(text: &str) -> String {
         .replace(r"\]", "$$")
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum MessageBodyFormat {
+    Markdown,
+    TelegramHtml,
+}
+
+fn render_message_body(text: &str, format: MessageBodyFormat) -> String {
+    let text = convert_math_delimiters(text);
+    match format {
+        MessageBodyFormat::Markdown => text,
+        MessageBodyFormat::TelegramHtml => normalize_message_body(&text),
+    }
+}
+
 fn normalize_message_body(text: &str) -> String {
     // Telegram channel sends a limited HTML subset. Converting it into the
     // existing Markdown widget is more reliable than Makepad's Html widget
@@ -87,22 +100,12 @@ fn normalize_message_body(text: &str) -> String {
 
         if let Some(tag_start) = rest.find('<') {
             let text_part = &rest[..tag_start];
-            append_text_fragment(
-                &mut body,
-                text_part,
-                blockquote_depth,
-                in_pre,
-            );
+            append_text_fragment(&mut body, text_part, blockquote_depth, in_pre);
             i += tag_start;
 
             let rest = &text[i..];
             let Some(tag_end) = rest.find('>') else {
-                append_text_fragment(
-                    &mut body,
-                    rest,
-                    blockquote_depth,
-                    in_pre,
-                );
+                append_text_fragment(&mut body, rest, blockquote_depth, in_pre);
                 break;
             };
 
@@ -121,12 +124,7 @@ fn normalize_message_body(text: &str) -> String {
             );
             i += tag_end + 1;
         } else {
-            append_text_fragment(
-                &mut body,
-                rest,
-                blockquote_depth,
-                in_pre,
-            );
+            append_text_fragment(&mut body, rest, blockquote_depth, in_pre);
             break;
         }
     }
@@ -147,14 +145,15 @@ fn normalize_message_body(text: &str) -> String {
     normalized.trim().to_string()
 }
 
-fn append_text_fragment(
-    body: &mut String,
-    text: &str,
-    blockquote_depth: usize,
-    in_pre: bool,
-) {
+fn append_text_fragment(body: &mut String, text: &str, blockquote_depth: usize, in_pre: bool) {
+    let text = if in_pre {
+        text.to_string()
+    } else {
+        escape_markdown_text(text)
+    };
+
     if blockquote_depth == 0 || in_pre {
-        body.push_str(text);
+        body.push_str(&text);
         return;
     }
 
@@ -164,6 +163,20 @@ fn append_text_fragment(
             body.push_str("> ");
         }
     }
+}
+
+fn escape_markdown_text(text: &str) -> String {
+    let mut escaped = String::with_capacity(text.len());
+    for ch in text.chars() {
+        match ch {
+            '\\' | '`' | '*' | '_' | '[' | ']' | '|' => {
+                escaped.push('\\');
+                escaped.push(ch);
+            }
+            _ => escaped.push(ch),
+        }
+    }
+    escaped
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -278,6 +291,7 @@ impl StandardMessageContent {
         cx: &mut Cx,
         content: &MessageContent,
         metadata: &MessageMetadata,
+        format: MessageBodyFormat,
     ) {
         /// String to add as suffix to the message text when its being typed.
         const TYPING_INDICATOR: &str = "●";
@@ -313,12 +327,12 @@ impl StandardMessageContent {
 
         let rendered_text = if metadata.is_writing() {
             let text_with_typing = format!("{} {}", content.text, TYPING_INDICATOR);
-            normalize_message_body(&convert_math_delimiters(&text_with_typing))
+            render_message_body(&text_with_typing, format)
         } else if !content.tool_calls.is_empty() {
             let tool_calls_text = Self::generate_tool_calls_text(content);
-            normalize_message_body(&convert_math_delimiters(&tool_calls_text))
+            render_message_body(&tool_calls_text, format)
         } else {
-            normalize_message_body(&convert_math_delimiters(&content.text))
+            render_message_body(&content.text, format)
         };
         self.label(ids!(markdown)).set_text(cx, &rendered_text);
     }
@@ -377,7 +391,12 @@ impl StandardMessageContent {
 
     /// Set a message content to display it.
     pub fn set_content(&mut self, cx: &mut Cx, content: &MessageContent) {
-        self.set_content_impl(cx, content, &MessageMetadata::new());
+        self.set_content_impl(
+            cx,
+            content,
+            &MessageMetadata::new(),
+            MessageBodyFormat::Markdown,
+        );
     }
 
     /// Same as [`set_content`], but also passes down metadata which is required
@@ -388,7 +407,23 @@ impl StandardMessageContent {
         content: &MessageContent,
         metadata: &MessageMetadata,
     ) {
-        self.set_content_impl(cx, content, metadata);
+        self.set_content_impl(cx, content, metadata, MessageBodyFormat::Markdown);
+    }
+
+    /// Sets a full message, allowing the widget to pick a provider-specific
+    /// render mode when necessary.
+    pub fn set_message(&mut self, cx: &mut Cx, message: &Message) {
+        match &message.from {
+            EntityId::Bot(bot_id) if bot_id.as_str().starts_with("telegram_bot/") => {
+                self.set_content_impl(
+                    cx,
+                    &message.content,
+                    &message.metadata,
+                    MessageBodyFormat::TelegramHtml,
+                );
+            }
+            _ => self.set_content_with_metadata(cx, &message.content, &message.metadata),
+        }
     }
 }
 
@@ -415,11 +450,25 @@ impl StandardMessageContentRef {
 
         inner.set_content_with_metadata(cx, content, metadata);
     }
+
+    /// See [`StandardMessageContent::set_message`].
+    pub fn set_message(&mut self, cx: &mut Cx, message: &Message) {
+        match &message.from {
+            EntityId::Bot(bot_id) if bot_id.as_str().starts_with("telegram_bot/") => {
+                let Some(mut inner) = self.borrow_mut() else {
+                    return;
+                };
+
+                inner.set_message(cx, message);
+            }
+            _ => self.set_content_with_metadata(cx, &message.content, &message.metadata),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::normalize_message_body;
+    use super::{MessageBodyFormat, normalize_message_body, render_message_body};
 
     #[test]
     fn test_normalize_html() {
@@ -443,5 +492,23 @@ mod tests {
     fn test_nested_bold() {
         let text = "<b>🧠 <b>核心功能</b></b>";
         assert_eq!(normalize_message_body(text), "**🧠 核心功能**");
+    }
+
+    #[test]
+    fn test_plain_text_keeps_angle_brackets() {
+        let text = "Rust generic: Vec<T>";
+        assert_eq!(
+            render_message_body(text, MessageBodyFormat::Markdown),
+            "Rust generic: Vec<T>"
+        );
+    }
+
+    #[test]
+    fn test_telegram_html_escapes_markdown_specials() {
+        let text = "<b>name_with_[brackets]</b>";
+        assert_eq!(
+            render_message_body(text, MessageBodyFormat::TelegramHtml),
+            "**name\\_with\\_\\[brackets\\]**"
+        );
     }
 }

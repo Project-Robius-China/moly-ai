@@ -183,9 +183,7 @@ impl Widget for Messages {
                 let _ = robius_open::Uri::new(url.as_str()).open();
             }
 
-            if let super::quick_reply_group::QuickReplyAction::Clicked(text) =
-                action.cast()
-            {
+            if let super::quick_reply_group::QuickReplyAction::Clicked(text) = action.cast() {
                 cx.widget_action(
                     self.widget_uid(),
                     &scope.path,
@@ -540,7 +538,7 @@ impl Messages {
                         slot.restore();
                         slot.default()
                             .as_standard_message_content()
-                            .set_content_with_metadata(cx, &message.content, &message.metadata);
+                            .set_message(cx, message);
                     }
 
                     let has_any_tool_calls = !message.content.tool_calls.is_empty();
@@ -809,9 +807,10 @@ fn extract_status_code(error_text: &str) -> Option<u16> {
     let mut tokens = error_text.split_whitespace();
     while let Some(token) = tokens.next() {
         if token.eq_ignore_ascii_case("status")
-            && let Some(code) = tokens.next().and_then(|t| t.parse::<u16>().ok()) {
-                return Some(code);
-            }
+            && let Some(code) = tokens.next().and_then(|t| t.parse::<u16>().ok())
+        {
+            return Some(code);
+        }
     }
     None
 }
