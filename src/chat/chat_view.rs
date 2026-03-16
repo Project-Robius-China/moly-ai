@@ -716,15 +716,14 @@ impl Glue {
             }
 
             #[cfg(not(target_arch = "wasm32"))]
-            let should_refresh_bot_cache = store_chat
-                .borrow()
-                .associated_bot
-                .as_ref()
-                .is_some_and(|bot_id| bot_id.as_str().ends_with("/botfather"));
+            let should_refresh_botfather_views = should_refresh_botfather_views(
+                store_chat.borrow().associated_bot.as_ref(),
+            );
 
             #[cfg(not(target_arch = "wasm32"))]
-            if should_refresh_bot_cache {
+            if should_refresh_botfather_views {
                 store.refresh_bot_name_cache();
+                store.reload_bot_context();
                 cx.redraw_all();
             }
 
@@ -945,11 +944,16 @@ fn sync_store_chat_messages(store_chat: &mut crate::data::chats::chat::Chat, mes
     store_chat.update_title_based_on_first_message();
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+fn should_refresh_botfather_views(bot_id: Option<&BotId>) -> bool {
+    bot_id.is_some_and(|bot_id| bot_id.as_str().ends_with("/botfather"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::sync_store_chat_messages;
     use crate::data::chats::chat::Chat;
-    use moly_kit::prelude::{Message, MessageContent};
+    use moly_kit::prelude::{BotId, Message, MessageContent};
 
     fn text_message(text: &str) -> Message {
         Message {
@@ -978,5 +982,17 @@ mod tests {
 
         assert_eq!(store_chat.messages.len(), 26);
         assert_eq!(store_chat.messages[25].content.text, "message 25");
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn test_botfather_refresh() {
+        assert!(super::should_refresh_botfather_views(Some(&BotId::new(
+            "telegram_bot/botfather"
+        ))));
+        assert!(!super::should_refresh_botfather_views(Some(&BotId::new(
+            "telegram_bot/token"
+        ))));
+        assert!(!super::should_refresh_botfather_views(None));
     }
 }

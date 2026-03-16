@@ -288,7 +288,7 @@ fn handle_managing_bot_input(
             *state = DialogState::AwaitingNewName {
                 token: token.to_string(),
             };
-            "Please enter a new name:".to_string()
+            "Please enter a new display name:".to_string()
         }
         "3" => revoke_token(state, token, store, server_port),
         "4" => {
@@ -377,7 +377,7 @@ fn handle_awaiting_new_name(
         Ok(bot) => {
             *state = DialogState::Idle;
             format!(
-                "**Name updated** to **{}** (@{}).",
+                "**Display name updated** to **{}** (@{}).",
                 bot.name, bot.username
             )
         }
@@ -460,7 +460,7 @@ fn enter_management_menu(state: &mut DialogState, bot: &BotInfo) -> String {
     format!(
         "**Managing** **{}** (@{})\n\n\
          1. View Token\n\
-         2. Edit Name\n\
+         2. Edit Display Name\n\
          3. Revoke Token\n\
          4. Delete Bot\n\
          5. Return\n\n\
@@ -635,7 +635,7 @@ mod tests {
             token: bot.token.clone(),
         };
         let r = process_input(&mut state, "2", &store, 8488);
-        assert!(r.text.contains("new name"));
+        assert!(r.text.contains("display name"));
 
         let r = process_input(
             &mut state,
@@ -643,8 +643,18 @@ mod tests {
             &store,
             8488,
         );
-        assert!(r.text.contains("updated"));
+        assert!(r.text.contains("Display name updated"));
         assert!(r.text.contains("Weather Master"));
+    }
+
+    #[test]
+    fn test_manage_menu_labels_display_name() {
+        let store = store();
+        store.create_bot("Weather Bot", "weather_bot").unwrap();
+
+        let mut state = DialogState::default();
+        let r = resolve_bot_selection(&mut state, "@weather_bot", &store);
+        assert!(r.text.contains("Edit Display Name"));
     }
 
     #[test]
