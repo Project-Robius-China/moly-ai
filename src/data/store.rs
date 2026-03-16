@@ -97,6 +97,15 @@ pub struct Store {
     /// Cached bot token → name mapping to avoid SQLite queries in draw paths.
     #[cfg(not(target_arch = "wasm32"))]
     bot_name_cache: std::collections::HashMap<String, String>,
+
+    /// Persistent BotFather dialog state that survives bot context reloads.
+    ///
+    /// Stored here rather than in `BotFatherClient` because `reload_bot_context`
+    /// destroys and recreates the client, which would reset the dialog mid-conversation.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub botfather_dialog_state: std::sync::Arc<
+        std::sync::Mutex<crate::bot_manager::dialog::DialogState>,
+    >,
 }
 
 const MOLY_SERVER_VERSION_EXTENSION: &str = "/api/v1";
@@ -229,6 +238,10 @@ impl Store {
                 _bot_server_handle: bot_server_handle,
                 #[cfg(not(target_arch = "wasm32"))]
                 bot_name_cache: std::collections::HashMap::new(),
+                #[cfg(not(target_arch = "wasm32"))]
+                botfather_dialog_state: std::sync::Arc::new(
+                    std::sync::Mutex::new(Default::default()),
+                ),
             };
 
             #[cfg(not(target_arch = "wasm32"))]
