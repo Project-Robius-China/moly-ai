@@ -76,8 +76,50 @@ fn render_message_body(text: &str, format: MessageBodyFormat) -> String {
     let text = convert_math_delimiters(text);
     match format {
         MessageBodyFormat::Markdown => text,
-        MessageBodyFormat::TelegramHtml => normalize_message_body(&text),
+        MessageBodyFormat::TelegramHtml => {
+            escape_telegram_ordered_list_markers(&normalize_message_body(&text))
+        }
     }
+}
+
+fn escape_telegram_ordered_list_markers(text: &str) -> String {
+    let mut escaped = Vec::new();
+    let mut in_code_block = false;
+
+    for line in text.lines() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("```") {
+            in_code_block = !in_code_block;
+            escaped.push(line.to_string());
+            continue;
+        }
+
+        if in_code_block {
+            escaped.push(line.to_string());
+            continue;
+        }
+
+        escaped.push(escape_ordered_list_marker(line));
+    }
+
+    escaped.join("\n")
+}
+
+fn escape_ordered_list_marker(line: &str) -> String {
+    let indent_len = line.len() - line.trim_start().len();
+    let (indent, content) = line.split_at(indent_len);
+    let digits_len = content.bytes().take_while(|b| b.is_ascii_digit()).count();
+
+    if digits_len == 0 || !content[digits_len..].starts_with(". ") {
+        return line.to_string();
+    }
+
+    format!(
+        "{}{}\\. {}",
+        indent,
+        &content[..digits_len],
+        &content[digits_len + 2..]
+    )
 }
 
 fn normalize_message_body(text: &str) -> String {
@@ -509,6 +551,15 @@ mod tests {
         assert_eq!(
             render_message_body(text, MessageBodyFormat::TelegramHtml),
             "**name\\_with\\_\\[brackets\\]**"
+        );
+    }
+
+    #[test]
+    fn test_telegram_html_escapes_ordered_list_markers() {
+        let text = "1. <b>OpenAI Sora 2 API重大更新</b>\n• 角色一致性大幅提升";
+        assert_eq!(
+            render_message_body(text, MessageBodyFormat::TelegramHtml),
+            "1\\. **OpenAI Sora 2 API重大更新**\n• 角色一致性大幅提升"
         );
     }
 }
