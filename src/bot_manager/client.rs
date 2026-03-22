@@ -32,13 +32,18 @@ impl Clone for BotFatherClient {
 
 impl BotFatherClient {
     /// Creates a new BotFather client backed by the given server state.
+    ///
+    /// `dialog_state` should be a long-lived Arc that survives bot context
+    /// reloads — otherwise the dialog resets to Idle on every reload and
+    /// multi-step wizards (like viewing a token) break.
     pub fn new(
         server_state: Arc<ServerState>,
         server_port: u16,
+        dialog_state: Arc<Mutex<DialogState>>,
     ) -> Self {
         Self {
             server_state,
-            state: Arc::new(Mutex::new(DialogState::default())),
+            state: dialog_state,
             server_port,
         }
     }

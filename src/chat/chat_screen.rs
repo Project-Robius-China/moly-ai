@@ -525,6 +525,7 @@ fn create_botfather_client(store: &Store) -> Option<Box<dyn BotClient>> {
     let client = crate::bot_manager::BotFatherClient::new(
         server_state,
         store.preferences.bot_server_port,
+        store.botfather_dialog_state.clone(),
     );
     Some(Box::new(client))
 }
